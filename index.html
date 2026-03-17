@@ -1483,9 +1483,9 @@
             heroVideo.src = src;
             // Default framing
             heroVideo.style.objectPosition = 'center center';
-            // For jm3, show more of the lower half
+            // For jm3, move viewport further down to show lower part
             if (src.indexOf('jm3') !== -1) {
-              heroVideo.style.objectPosition = 'center 80%';
+              heroVideo.style.objectPosition = 'center 92%';
             }
             heroVideo.play().catch(function() {});
           }
