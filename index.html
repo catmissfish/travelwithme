@@ -55,6 +55,38 @@
       border-bottom: 1px solid rgba(226,232,240,0.9);
       padding-bottom: 18px;
     }
+    .hero-video {
+      position: relative;
+      width: 100%;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(226,232,240,0.9);
+      box-shadow:
+        0 20px 50px rgba(15,23,42,0.18),
+        0 0 0 0.5px rgba(255,255,255,0.9) inset;
+      background: radial-gradient(circle at top left, #e5edff, #f5f7ff);
+    }
+    .hero-video video {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      transform-origin: center;
+      transform: scale(1.01);
+      filter: saturate(1.03) contrast(1.03);
+      transition: transform 0.8s ease-out;
+    }
+    .hero-video::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15,23,42,0.04), rgba(15,23,42,0.12));
+      mix-blend-mode: soft-light;
+      pointer-events: none;
+    }
+    .app-shell:hover .hero-video video {
+      transform: scale(1.03);
+    }
     .title-row {
       display: flex;
       align-items: baseline;
@@ -478,6 +510,9 @@
       <div class="title-row">
         <div class="app-title">ROAD · NOTES</div>
         <div class="app-subtitle">Road trip notebook</div>
+      </div>
+      <div class="hero-video">
+        <video src="kling.mp4" autoplay muted loop playsinline></video>
       </div>
       <div class="summary-row">
         <span>Total <strong id="totalRoutes">0</strong> routes</span>
