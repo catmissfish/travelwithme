@@ -512,7 +512,7 @@
         <div class="app-subtitle">Road trip notebook</div>
       </div>
       <div class="hero-video">
-        <video src="kling.mp4" autoplay muted loop playsinline></video>
+        <video id="heroVideo" autoplay muted playsinline></video>
       </div>
       <div class="summary-row">
         <span>Total <strong id="totalRoutes">0</strong> routes</span>
@@ -1121,6 +1121,7 @@
       var itineraryTitle = document.getElementById('itineraryTitle');
       var itinerarySubtitle = document.getElementById('itinerarySubtitle');
       var itineraryBody = document.getElementById('itineraryBody');
+      var heroVideo = document.getElementById('heroVideo');
       var googleMapsApiKey = '';
 
       function formatDate(d) {
@@ -1467,6 +1468,27 @@
 
       initSummary();
       renderRoutes();
+
+      // hero video playlist (two-part loop)
+      if (heroVideo) {
+        (function() {
+          // two-part hero video playlist
+          var sources = ['jm1.mp4', 'jp2.mp4'];
+          var idx = 0;
+
+          function playCurrent() {
+            heroVideo.src = sources[idx];
+            heroVideo.play().catch(function() {});
+          }
+
+          heroVideo.addEventListener('ended', function() {
+            idx = (idx + 1) % sources.length;
+            playCurrent();
+          });
+
+          playCurrent();
+        })();
+      }
     })();
   </script>
 </body>
