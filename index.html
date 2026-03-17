@@ -292,16 +292,19 @@
     .route-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 2px;
-      font-size: 0.74rem;
+      gap: 6px 8px;
+      margin-top: 6px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(226,232,240,0.9);
+      font-size: 0.72rem;
     }
     .route-tag {
-      padding: 2px 7px;
+      padding: 3px 9px;
       border-radius: 999px;
       background: #eff6ff;
       color: #1d4ed8;
       border: 1px solid rgba(191,219,254,0.9);
+      letter-spacing: 0.02em;
     }
     .route-date {
       position: absolute;
@@ -539,11 +542,11 @@
         },
         {
           id: 'R-2025-01-AU',
-          title: 'Australia 2025.01 · Brisbane → Sydney coastal road trip',
+          title: 'Australia',
           from: 'Brisbane',
           to: 'Sydney',
           days: 9,
-          distance: 0,
+          distance: 957,
           date: '2025-01-31',
           type: 'mountain',
           tags: ['Australia', 'Queensland', 'NSW', 'Road trip', 'Coast'],
@@ -641,11 +644,11 @@
         },
         {
           id: 'R-2024-02-NZ',
-          title: 'New Zealand 2024.02 · Christchurch → Tekapo → Queenstown → Oamaru',
+          title: 'New Zealand',
           from: 'Christchurch',
           to: 'Christchurch',
           days: 10,
-          distance: 0,
+          distance: 1012,
           date: '2024-02-04',
           type: 'sea',
           tags: ['New Zealand', 'South Island', 'Road trip'],
@@ -734,7 +737,7 @@
             {
               date: '2024-02-12',
               city: 'Christchurch',
-              hotel: '—',
+              hotel: 'Christchurch',
               items: [
                 'Oamaru: city walk, Little Blue Penguin viewing',
                 'Drive back to Christchurch (about 3h)',
