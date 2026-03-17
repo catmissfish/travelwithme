@@ -170,15 +170,7 @@
       border-style: dashed;
     }
     .layout-main {
-      display: grid;
-      grid-template-columns: minmax(0,1.8fr) minmax(0,1fr);
-      gap: 20px;
       margin-top: 4px;
-    }
-    @media (max-width: 830px) {
-      .layout-main {
-        grid-template-columns: minmax(0,1fr);
-      }
     }
     .routes-panel {
       display: flex;
@@ -281,37 +273,6 @@
       color: rgba(245,236,216,0.7);
       padding: 16px 10px 8px;
     }
-    .side-panel {
-      border-radius: 14px;
-      border: 1px dashed rgba(245,236,216,0.24);
-      padding: 12px 14px 14px;
-      background: linear-gradient(165deg, rgba(245,236,216,0.08), rgba(9,6,4,0.9));
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 0.86rem;
-      color: rgba(245,236,216,0.86);
-    }
-    .side-title {
-      font-size: 0.9rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: rgba(245,236,216,0.9);
-    }
-    .side-note {
-      color: rgba(245,236,216,0.78);
-      line-height: 1.6;
-    }
-    .side-mini {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
-      gap: 8px 10px;
-      font-size: 0.8rem;
-      color: rgba(245,236,216,0.76);
-    }
-    .side-mini div strong {
-      color: rgba(245,236,216,0.98);
-    }
   </style>
 </head>
 <body>
@@ -328,15 +289,15 @@
       <div class="search-bar">
         <div class="search-input-wrap">
           <span class="search-icon">🔍</span>
-          <input id="searchInput" type="search" placeholder="按目的地 / 出发地 / 关键字搜索，例如：川西、环青海湖、国道318…" autocomplete="off">
+          <input id="searchInput" type="search" placeholder="按目的地 / 出发地 / 关键字搜索，例如：挪威、布里斯班、基督城" autocomplete="off">
           <span class="search-meta" id="matchCount">全部路线</span>
         </div>
         <div class="filter-row" id="filterRow">
           <button class="chip active" data-filter="all"><span class="dot"></span>全部</button>
-          <button class="chip" data-filter="weekend">周末短途</button>
-          <button class="chip" data-filter="long">长线自驾</button>
-          <button class="chip" data-filter="mountain">山路 / 盘山</button>
-          <button class="chip" data-filter="sea">看海</button>
+          <button class="chip" data-filter="weekend">中国</button>
+          <button class="chip" data-filter="long">欧洲</button>
+          <button class="chip" data-filter="mountain">澳洲</button>
+          <button class="chip" data-filter="sea">新西兰</button>
         </div>
       </div>
     </header>
@@ -349,19 +310,6 @@
         <div id="routesList" class="routes-list"></div>
         <div id="emptyState" class="empty-state" style="display:none;">没有匹配的路线，可以尝试换个关键词，或者稍后补充新的行程记录。</div>
       </section>
-
-      <aside class="side-panel">
-        <div class="side-title">TRAVEL MARGIN</div>
-        <p class="side-note">
-          这里是你的<strong>自驾游笔记首页</strong>。每增加一条路线，只需要在页面底部的
-          <strong>routes 数据</strong>里新增一项，刷新后就会自动出现在列表里，也支持搜索。
-        </p>
-        <div class="side-mini">
-          <div><strong>推荐记录内容</strong><br>出发地 / 目的地 · 天数 · 总里程 · 关键词标签</div>
-          <div><strong>搜索提示</strong><br>支持同时按城市名、景点名、线路编号等模糊匹配。</div>
-          <div><strong>下一步可以做</strong><br>给每条路线链接到独立详情页，放行程安排、照片等。</div>
-        </div>
-      </aside>
     </main>
   </div>
 
