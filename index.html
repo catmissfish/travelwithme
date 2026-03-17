@@ -460,11 +460,11 @@
       font-size: 0.82rem;
       color: rgba(15,23,42,0.95);
     }
-    .day-hotel strong { color: rgba(215,178,130,0.95); }
+    .day-hotel strong { color: rgba(37,99,235,0.95); }
     .day-list {
       margin-top: 6px;
       padding-left: 18px;
-      color: rgba(245,236,216,0.78);
+      color: rgba(71,85,105,0.96);
       line-height: 1.6;
       font-size: 0.84rem;
     }
@@ -484,7 +484,7 @@
       <div class="search-bar">
         <div class="search-input-wrap">
           <span class="search-icon">🔍</span>
-          <input id="searchInput" type="search" placeholder="Search by origin / destination / keywords (e.g. Norway, Brisbane, Christchurch)" autocomplete="off">
+          <input id="searchInput" type="search" placeholder="Search by origin / destination (e.g. Norway, Brisbane)" autocomplete="off">
           <span class="search-meta" id="matchCount">All routes</span>
         </div>
         <div class="filter-row" id="filterRow">
@@ -649,7 +649,7 @@
           date: '2024-02-04',
           type: 'sea',
           tags: ['New Zealand', 'South Island', 'Road trip'],
-          previewImage: 'assets/nz-route-preview.png',
+          previewImage: 'nz-route-preview.png',
           itinerary: [
             {
               date: '2024-02-04',
@@ -909,7 +909,11 @@
       function getStopsForRoute(route) {
         if (!route) return [];
         if (route.itinerary && route.itinerary.length) {
-          var cities = route.itinerary.map(function(d) { return d.city || ''; });
+          var cities = route.itinerary.map(function(d) {
+            var hotelName = (d.hotel || '').trim();
+            if (!hotelName || hotelName === '—') return '';
+            return d.city || '';
+          });
           var uniq = uniqConsecutive(cities).filter(Boolean);
           if (uniq.length >= 2) return uniq;
         }
