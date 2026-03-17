@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>自驾游路线记录</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --book-width: 320px;
+      --book-height: 420px;
+      --cover-color: #2c1810;
+      --cover-light: #4a3328;
+      --page-color: #f5ecd8;
+      --ink: #1a1a1a;
+      --accent: #8b4513;
+      --bg-dark: #1a1510;
+    }
+    body {
+      min-height: 100vh;
+      font-family: 'Noto Serif SC', 'Cormorant Garamond', serif;
+      background: radial-gradient(circle at top, #3b2b23 0%, #1a1510 45%, #0f0b08 100%);
+      color: var(--ink);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 32px 16px 40px;
+    }
+    .app-shell {
+      width: 100%;
+      max-width: 1120px;
+      background: rgba(245,236,216,0.06);
+      border-radius: 18px;
+      border: 1px solid rgba(245,236,216,0.16);
+      box-shadow:
+        0 18px 40px rgba(0,0,0,0.65),
+        0 0 0 1px rgba(0,0,0,0.6) inset;
+      backdrop-filter: blur(16px);
+      padding: 24px 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    @media (min-width: 768px) {
+      .app-shell { padding: 28px 32px 32px; }
+    }
+    .app-header {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border-bottom: 1px dashed rgba(245,236,216,0.22);
+      padding-bottom: 16px;
+    }
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .app-title {
+      font-size: 1.4rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(245,236,216,0.95);
+      white-space: nowrap;
+    }
+    .app-subtitle {
+      font-size: 0.9rem;
+      color: rgba(245,236,216,0.75);
+    }
+    .summary-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      font-size: 0.86rem;
+      color: rgba(245,236,216,0.72);
+    }
+    .summary-row span strong {
+      color: rgba(245,236,216,0.96);
+      font-weight: 600;
+    }
+    .search-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    @media (min-width: 700px) {
+      .search-bar {
+        flex-direction: row;
+        align-items: center;
+      }
+    }
+    .search-input-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+    .search-input-wrap input {
+      width: 100%;
+      padding: 10px 40px 10px 30px;
+      border-radius: 999px;
+      border: 1px solid rgba(245,236,216,0.18);
+      background: radial-gradient(circle at top left, rgba(245,236,216,0.08), rgba(10,7,4,0.85));
+      color: rgba(245,236,216,0.96);
+      font-size: 0.94rem;
+      outline: none;
+      transition: border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .search-input-wrap input::placeholder {
+      color: rgba(245,236,216,0.46);
+    }
+    .search-input-wrap input:focus {
+      border-color: rgba(215,178,130,0.9);
+      box-shadow: 0 0 0 1px rgba(215,178,130,0.95);
+      background: radial-gradient(circle at top left, rgba(245,236,216,0.16), rgba(10,7,4,0.88));
+    }
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      color: rgba(245,236,216,0.58);
+      pointer-events: none;
+    }
+    .search-meta {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.78rem;
+      color: rgba(245,236,216,0.46);
+      pointer-events: none;
+    }
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+    .chip {
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(245,236,216,0.18);
+      background: rgba(245,236,216,0.02);
+      color: rgba(245,236,216,0.7);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .chip span.dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(215,178,130,0.9);
+    }
+    .chip.active {
+      background: rgba(215,178,130,0.14);
+      color: rgba(245,236,216,0.96);
+      border-color: rgba(215,178,130,0.9);
+    }
+    .chip[data-filter="all"] {
+      border-style: dashed;
+    }
+    .layout-main {
+      display: grid;
+      grid-template-columns: minmax(0,1.8fr) minmax(0,1fr);
+      gap: 20px;
+      margin-top: 4px;
+    }
+    @media (max-width: 830px) {
+      .layout-main {
+        grid-template-columns: minmax(0,1fr);
+      }
+    }
+    .routes-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .routes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: rgba(245,236,216,0.75);
+    }
+    .routes-header strong {
+      color: rgba(245,236,216,0.96);
+    }
+    .routes-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .route-card {
+      position: relative;
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+      background: radial-gradient(circle at top left, rgba(245,236,216,0.12), rgba(15,11,8,0.96));
+      border: 1px solid rgba(245,236,216,0.15);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.6);
+      cursor: default;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease, background 0.15s ease;
+    }
+    .route-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 26px rgba(0,0,0,0.75);
+      border-color: rgba(215,178,130,0.84);
+      background: radial-gradient(circle at top left, rgba(245,236,216,0.18), rgba(15,11,8,0.96));
+    }
+    .route-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .route-title {
+      font-size: 1rem;
+      color: rgba(245,236,216,0.98);
+    }
+    .route-sub {
+      font-size: 0.82rem;
+      color: rgba(245,236,216,0.7);
+    }
+    .route-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      font-size: 0.8rem;
+      color: rgba(245,236,216,0.75);
+    }
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(245,236,216,0.18);
+    }
+    .meta-pill span.label {
+      color: rgba(245,236,216,0.64);
+    }
+    .meta-pill span.value {
+      color: rgba(245,236,216,0.98);
+    }
+    .route-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+      font-size: 0.74rem;
+    }
+    .route-tag {
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(215,178,130,0.18);
+      color: rgba(245,236,216,0.96);
+      border: 1px solid rgba(215,178,130,0.9);
+    }
+    .route-date {
+      position: absolute;
+      right: 12px;
+      top: 10px;
+      font-size: 0.72rem;
+      color: rgba(245,236,216,0.65);
+    }
+    .empty-state {
+      font-size: 0.86rem;
+      color: rgba(245,236,216,0.7);
+      padding: 16px 10px 8px;
+    }
+    .side-panel {
+      border-radius: 14px;
+      border: 1px dashed rgba(245,236,216,0.24);
+      padding: 12px 14px 14px;
+      background: linear-gradient(165deg, rgba(245,236,216,0.08), rgba(9,6,4,0.9));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.86rem;
+      color: rgba(245,236,216,0.86);
+    }
+    .side-title {
+      font-size: 0.9rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(245,236,216,0.9);
+    }
+    .side-note {
+      color: rgba(245,236,216,0.78);
+      line-height: 1.6;
+    }
+    .side-mini {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+      gap: 8px 10px;
+      font-size: 0.8rem;
+      color: rgba(245,236,216,0.76);
+    }
+    .side-mini div strong {
+      color: rgba(245,236,216,0.98);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="title-row">
+        <div class="app-title">ROAD · NOTES</div>
+        <div class="app-subtitle">自驾游路线小册 · 记录每一段在路上的风景</div>
+      </div>
+      <div class="summary-row">
+        <span>目前共记录 <strong id="totalRoutes">0</strong> 条路线</span>
+        <span>最近出发时间：<strong id="latestDate">-</strong></span>
+      </div>
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input id="searchInput" type="search" placeholder="按目的地 / 出发地 / 关键字搜索，例如：川西、环青海湖、国道318…" autocomplete="off">
+          <span class="search-meta" id="matchCount">全部路线</span>
+        </div>
+        <div class="filter-row" id="filterRow">
+          <button class="chip active" data-filter="all"><span class="dot"></span>全部</button>
+          <button class="chip" data-filter="weekend">周末短途</button>
+          <button class="chip" data-filter="long">长线自驾</button>
+          <button class="chip" data-filter="mountain">山路 / 盘山</button>
+          <button class="chip" data-filter="sea">看海</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="routes-panel" aria-label="自驾游路线列表">
+        <div class="routes-header">
+          <span><strong>路线列表</strong> · 点击下方卡片即可快速浏览关键信息</span>
+        </div>
+        <div id="routesList" class="routes-list"></div>
+        <div id="emptyState" class="empty-state" style="display:none;">没有匹配的路线，可以尝试换个关键词，或者稍后补充新的行程记录。</div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="side-title">TRAVEL MARGIN</div>
+        <p class="side-note">
+          这里是你的<strong>自驾游笔记首页</strong>。每增加一条路线，只需要在页面底部的
+          <strong>routes 数据</strong>里新增一项，刷新后就会自动出现在列表里，也支持搜索。
+        </p>
+        <div class="side-mini">
+          <div><strong>推荐记录内容</strong><br>出发地 / 目的地 · 天数 · 总里程 · 关键词标签</div>
+          <div><strong>搜索提示</strong><br>支持同时按城市名、景点名、线路编号等模糊匹配。</div>
+          <div><strong>下一步可以做</strong><br>给每条路线链接到独立详情页，放行程安排、照片等。</div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      // 在这里维护你的自驾游路线数据
+      var routes = [
+        {
+          id: 'R-001',
+          title: '沪 — 舟山东海看海两日',
+          from: '上海',
+          to: '舟山朱家尖 · 东沙',
+          days: 2,
+          distance: 520,
+          date: '2025-09-30',
+          type: 'weekend',
+          tags: ['看海', '跨海大桥', '海鲜'],
+          note: '沿沈海高速+舟山跨海大桥，适合周末放空。'
+        },
+        {
+          id: 'R-002',
+          title: '川西小环线 · 秋色之旅',
+          from: '成都',
+          to: '新都桥 · 塔公草原 · 海螺沟',
+          days: 6,
+          distance: 1350,
+          date: '2024-10-12',
+          type: 'mountain',
+          tags: ['川西', '高原', '山路', '摄影'],
+          note: '高海拔路段较多，适合秋季看彩林和银河。'
+        },
+        {
+          id: 'R-003',
+          title: '环青海湖+茶卡 · 高原自驾',
+          from: '西宁',
+          to: '青海湖 · 茶卡盐湖',
+          days: 4,
+          distance: 780,
+          date: '2023-08-05',
+          type: 'long',
+          tags: ['湖泊', '高原', '环线'],
+          note: '适合夏季，注意防晒和昼夜温差。'
+        },
+        {
+          id: 'R-004',
+          title: '厦门 — 漳州东山岛海边露营',
+          from: '厦门',
+          to: '漳州东山岛',
+          days: 3,
+          distance: 410,
+          date: '2022-05-01',
+          type: 'sea',
+          tags: ['看海', '露营', '海岛'],
+          note: '沿海 小众海滩较多，适合露营和拍照。'
+        }
+      ];
+
+      var searchInput = document.getElementById('searchInput');
+      var routesList = document.getElementById('routesList');
+      var matchCount = document.getElementById('matchCount');
+      var emptyState = document.getElementById('emptyState');
+      var totalRoutes = document.getElementById('totalRoutes');
+      var latestDate = document.getElementById('latestDate');
+      var filterRow = document.getElementById('filterRow');
+
+      function formatDate(d) {
+        if (!d) return '-';
+        var parts = d.split('-');
+        if (parts.length !== 3) return d;
+        return parts[0] + '年' + parts[1] + '月' + parts[2] + '日';
+      }
+
+      function initSummary() {
+        totalRoutes.textContent = routes.length;
+        if (!routes.length) {
+          latestDate.textContent = '-';
+          return;
+        }
+        var sorted = routes
+          .slice()
+          .filter(function(r) { return !!r.date; })
+          .sort(function(a, b) {
+            return (b.date || '').localeCompare(a.date || '');
+          });
+        latestDate.textContent = sorted.length ? formatDate(sorted[0].date) : '-';
+      }
+
+      function renderRoutes() {
+        var keyword = (searchInput.value || '').trim().toLowerCase();
+        var activeFilter = filterRow.querySelector('.chip.active')?.getAttribute('data-filter') || 'all';
+
+        var filtered = routes.filter(function(r) {
+          if (activeFilter !== 'all' && r.type !== activeFilter) return false;
+
+          if (!keyword) return true;
+          var haystack = [
+            r.title,
+            r.from,
+            r.to,
+            (r.id || ''),
+            (r.note || ''),
+            (r.tags || []).join(' ')
+          ].join(' ').toLowerCase();
+          return haystack.indexOf(keyword) !== -1;
+        });
+
+        routesList.innerHTML = '';
+
+        if (!filtered.length) {
+          emptyState.style.display = 'block';
+          matchCount.textContent = '0 条结果';
+        } else {
+          emptyState.style.display = 'none';
+          matchCount.textContent = filtered.length === routes.length
+            ? '全部路线'
+            : filtered.length + ' 条结果';
+
+          filtered.forEach(function(r) {
+            var card = document.createElement('article');
+            card.className = 'route-card';
+
+            var title = document.createElement('div');
+            title.className = 'route-main';
+            title.innerHTML =
+              '<div class="route-title">' + (r.title || '') + '</div>' +
+              '<div class="route-sub">' +
+              (r.from || '') + ' → ' + (r.to || '') +
+              '</div>';
+
+            var meta = document.createElement('div');
+            meta.className = 'route-meta';
+            meta.innerHTML =
+              '<div class="meta-pill"><span class="label">天数</span><span class="value">' +
+              (r.days || '-') +
+              '</span></div>' +
+              '<div class="meta-pill"><span class="label">里程</span><span class="value">' +
+              (r.distance ? r.distance + ' km' : '-') +
+              '</span></div>' +
+              (r.id ? '<div class="meta-pill"><span class="label">编号</span><span class="value">' + r.id + '</span></div>' : '');
+
+            var tags = document.createElement('div');
+            tags.className = 'route-tags';
+            (r.tags || []).forEach(function(t) {
+              var span = document.createElement('span');
+              span.className = 'route-tag';
+              span.textContent = t;
+              tags.appendChild(span);
+            });
+
+            var date = document.createElement('div');
+            date.className = 'route-date';
+            date.textContent = r.date ? formatDate(r.date) : '';
+
+            var note = document.createElement('div');
+            note.style.fontSize = '0.78rem';
+            note.style.color = 'rgba(245,236,216,0.7)';
+            note.textContent = r.note || '';
+
+            card.appendChild(title);
+            card.appendChild(meta);
+            if ((r.tags || []).length) card.appendChild(tags);
+            if (r.note) card.appendChild(note);
+            card.appendChild(date);
+
+            routesList.appendChild(card);
+          });
+        }
+      }
+
+      searchInput.addEventListener('input', function() {
+        renderRoutes();
+      });
+
+      filterRow.addEventListener('click', function(e) {
+        var target = e.target.closest('.chip');
+        if (!target) return;
+        filterRow.querySelectorAll('.chip').forEach(function(btn) {
+          btn.classList.toggle('active', btn === target);
+        });
+        renderRoutes();
+      });
+
+      initSummary();
+      renderRoutes();
+    })();
+  </script>
+</body>
+</html>
