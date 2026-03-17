@@ -733,7 +733,21 @@
 
           var right = document.createElement('div');
           right.className = 'day-hotel';
-          right.innerHTML = '<strong>Hotel：</strong>' + (day.hotel || '—');
+          (function() {
+            var hotelName = (day.hotel || '').trim();
+            if (!hotelName || hotelName === '—') {
+              right.innerHTML = '<strong>Hotel：</strong>—';
+              return;
+            }
+            var query = (hotelName + ' ' + (day.city || '')).trim();
+            var url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+            right.innerHTML =
+              '<strong>Hotel：</strong>' +
+              '<a href="' + url + '" target="_blank" rel="noopener noreferrer" ' +
+              'style="color: rgba(215,178,130,0.95); text-decoration: none; border-bottom: 1px dashed rgba(215,178,130,0.55);">' +
+              hotelName +
+              '</a>';
+          })();
 
           top.appendChild(left);
           top.appendChild(right);
