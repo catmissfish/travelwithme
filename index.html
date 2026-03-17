@@ -524,7 +524,7 @@
       var routes = [
         {
           id: 'R-2025-01-AU',
-          title: 'Australia',
+          title: 'Australia 2025.01 · Brisbane → Gold Coast → Byron Bay → Port Macquarie → Port Stephens → Sydney',
           from: 'Brisbane',
           to: 'Sydney',
           days: 9,
@@ -627,7 +627,7 @@
         },
         {
           id: 'R-2024-02-NZ',
-          title: 'New Zealand 2024.02',
+          title: 'New Zealand 2024.02 · Christchurch → Lake Tekapo → Queenstown → Oamaru → Christchurch',
           from: 'Christchurch',
           to: 'Christchurch',
           days: 10,
@@ -739,7 +739,7 @@
         },
         {
           id: 'R-2024-09-NO',
-          title: 'Norway 2024.09',
+          title: 'Norway 2024.09 · Copenhagen → Voss → Sogndalsfjøra → Loen → Oslo → Gothenburg → Copenhagen',
           from: 'Copenhagen',
           to: 'Copenhagen',
           days: 10,
@@ -979,6 +979,7 @@
               city: 'Stuttgart',
               hotel: 'Radisson Blu Hotel at Porsche Design Tower Stuttgart',
               items: [
+                'Frankfurt (start of road trip)',
                 '02:30–06:50 Beijing → Frankfurt',
                 'Pick up rental car at 10:30 (Sixt)',
                 'Drive Frankfurt Airport → Heidelberg (about 50 mins)',
@@ -1161,11 +1162,17 @@
 
             var title = document.createElement('div');
             title.className = 'route-main';
-            title.innerHTML =
-              '<div class="route-title">' + (r.title || '') + '</div>' +
-              '<div class="route-sub">' +
-              (r.from || '') + ' → ' + (r.to || '') +
-              '</div>';
+            (function() {
+              var fullTitle = String(r.title || '');
+              var parts = fullTitle.split('·');
+              var mainTitle = parts[0].trim();
+              var routeLine = parts.slice(1).join('·').trim();
+              var html = '<div class="route-title">' + mainTitle + '</div>';
+              if (routeLine) {
+                html += '<div class="route-sub">' + routeLine + '</div>';
+              }
+              title.innerHTML = html;
+            })();
 
             var meta = document.createElement('div');
             meta.className = 'route-meta';
@@ -1223,6 +1230,18 @@
 
       function getStopsForRoute(route) {
         if (!route) return [];
+        if (route.id === 'R-2024-05-DE') {
+          return uniqConsecutive([
+            'Frankfurt',
+            'Stuttgart',
+            'Freudenstadt (Black Forest)',
+            'Konstanz',
+            'Füssen',
+            'Munich',
+            'Rothenburg ob der Tauber',
+            'Frankfurt'
+          ]);
+        }
         if (route.itinerary && route.itinerary.length) {
           var cities = route.itinerary.map(function(d) {
             var hotelName = (d.hotel || '').trim();
@@ -1286,7 +1305,7 @@
       function openItinerary(route) {
         if (!route || !(route.itinerary && route.itinerary.length)) return;
         itineraryTitle.textContent = route.title || 'Itinerary';
-        itinerarySubtitle.textContent = (route.from || '') + ' → ' + (route.to || '') + ' · ' + (route.days || '-') + ' days';
+        itinerarySubtitle.textContent = route.days ? (route.days + ' days') : '';
         itineraryBody.innerHTML = '';
 
         var stops = getStopsForRoute(route);
