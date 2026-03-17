@@ -21,36 +21,39 @@
     }
     body {
       min-height: 100vh;
-      font-family: 'Noto Serif SC', 'Cormorant Garamond', serif;
-      background: radial-gradient(circle at top, #eff5ff 0%, #dbeafe 45%, #bfdbfe 100%);
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, -apple-system-body, 'SF Pro Text',
+        'SF Pro Display', sans-serif;
+      background: radial-gradient(circle at top, #f5f7fb 0%, #e4ecfb 45%, #d5e4ff 100%);
       color: var(--ink);
       display: flex;
       align-items: stretch;
       justify-content: center;
-      padding: 32px 16px 40px;
+      padding: 40px 16px 56px;
     }
     .app-shell {
       width: 100%;
       max-width: 1120px;
-      background: rgba(255,255,255,0.88);
-      border-radius: 18px;
-      border: 1px solid rgba(148,163,184,0.35);
-      box-shadow: 0 20px 60px rgba(15,23,42,0.25);
-      backdrop-filter: blur(16px);
-      padding: 24px 24px 28px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.96), rgba(246,249,255,0.98));
+      border-radius: 28px;
+      border: 1px solid rgba(148,163,184,0.25);
+      box-shadow:
+        0 28px 80px rgba(15,23,42,0.18),
+        0 0 0 0.5px rgba(255,255,255,0.9) inset;
+      backdrop-filter: blur(26px);
+      padding: 28px 22px 30px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 22px;
     }
     @media (min-width: 768px) {
-      .app-shell { padding: 28px 32px 32px; }
+      .app-shell { padding: 34px 40px 38px; }
     }
     .app-header {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      border-bottom: 1px dashed rgba(148,163,184,0.6);
-      padding-bottom: 16px;
+      gap: 18px;
+      border-bottom: 1px solid rgba(226,232,240,0.9);
+      padding-bottom: 18px;
     }
     .title-row {
       display: flex;
@@ -60,32 +63,34 @@
       flex-wrap: wrap;
     }
     .app-title {
-      font-size: 1.4rem;
+      font-size: 1.6rem;
       letter-spacing: 0.28em;
       text-transform: uppercase;
-      color: #0f172a;
+      color: #020617;
       white-space: nowrap;
+      font-weight: 500;
     }
     .app-subtitle {
-      font-size: 0.9rem;
-      color: rgba(51,65,85,0.85);
+      font-size: 0.98rem;
+      color: rgba(71,85,105,0.9);
+      letter-spacing: 0.04em;
     }
     .summary-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px 18px;
-      font-size: 0.86rem;
-      color: rgba(100,116,139,0.9);
+      gap: 6px 18px;
+      font-size: 0.82rem;
+      color: rgba(100,116,139,0.95);
     }
     .summary-row span strong {
-      color: #0f172a;
-      font-weight: 600;
+      color: #020617;
+      font-weight: 500;
     }
     .search-bar {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-top: 6px;
+      gap: 12px;
+      margin-top: 8px;
     }
     @media (min-width: 700px) {
       .search-bar {
@@ -100,30 +105,33 @@
     }
     .search-input-wrap input {
       width: 100%;
-      padding: 10px 40px 10px 30px;
+      padding: 11px 40px 11px 32px;
       border-radius: 999px;
       border: 1px solid rgba(148,163,184,0.55);
-      background: radial-gradient(circle at top left, #eff6ff, #dbeafe);
-      color: #0f172a;
-      font-size: 0.94rem;
+      background: rgba(248,250,252,0.88);
+      color: #020617;
+      font-size: 0.95rem;
       outline: none;
-      transition: border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      transition: border 0.16s ease, box-shadow 0.18s ease, background 0.18s ease, transform 0.12s ease;
     }
     .search-input-wrap input::placeholder {
-      color: rgba(148,163,184,0.9);
+      color: rgba(148,163,184,0.95);
     }
     .search-input-wrap input:focus {
-      border-color: rgba(59,130,246,0.95);
-      box-shadow: 0 0 0 1px rgba(59,130,246,0.95);
-      background: radial-gradient(circle at top left, #eff6ff, #bfdbfe);
+      border-color: rgba(37,99,235,0.98);
+      box-shadow:
+        0 0 0 1px rgba(59,130,246,0.9),
+        0 10px 25px rgba(15,23,42,0.18);
+      background: rgba(255,255,255,0.96);
+      transform: translateY(-0.5px);
     }
     .search-icon {
       position: absolute;
-      left: 10px;
+      left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 0.9rem;
-      color: rgba(245,236,216,0.58);
+      font-size: 0.86rem;
+      color: rgba(148,163,184,1);
       pointer-events: none;
     }
     .search-meta {
@@ -132,7 +140,7 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 0.78rem;
-      color: rgba(245,236,216,0.46);
+      color: rgba(148,163,184,0.95);
       pointer-events: none;
     }
     .filter-row {
@@ -142,16 +150,17 @@
       font-size: 0.8rem;
     }
     .chip {
-      padding: 5px 12px;
+      padding: 5px 13px;
       border-radius: 999px;
-      border: 1px solid rgba(148,163,184,0.55);
-      background: rgba(255,255,255,0.65);
+      border: 1px solid rgba(148,163,184,0.45);
+      background: rgba(255,255,255,0.9);
       color: rgba(51,65,85,0.9);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      transition: all 0.15s ease;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease,
+        box-shadow 0.15s ease;
     }
     .chip span.dot {
       width: 6px;
@@ -163,12 +172,14 @@
       background: var(--accent-soft);
       color: #1e3a8a;
       border-color: rgba(59,130,246,0.95);
+      box-shadow: 0 6px 16px rgba(59,130,246,0.16);
+      transform: translateY(-0.5px);
     }
     .chip[data-filter="all"] {
       border-style: dashed;
     }
     .layout-main {
-      margin-top: 4px;
+      margin-top: 12px;
     }
     .routes-panel {
       display: flex;
@@ -188,37 +199,46 @@
     }
     .routes-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 22px;
+      margin-top: 4px;
     }
     .route-card {
       position: relative;
-      border-radius: 18px;
-      padding: 0 0 14px;
-      background: #ffffff;
-      border: 1px solid rgba(148,163,184,0.4);
-      box-shadow: 0 18px 40px rgba(15,23,42,0.18);
+      border-radius: 24px;
+      padding: 0 0 16px;
+      background: rgba(255,255,255,0.96);
+      border: 1px solid rgba(226,232,240,0.9);
+      box-shadow:
+        0 18px 40px rgba(15,23,42,0.10),
+        0 1px 0 rgba(255,255,255,0.9) inset;
       cursor: default;
       display: flex;
       flex-direction: column;
       gap: 8px;
       overflow: hidden;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, border 0.18s ease;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border 0.18s ease, background 0.18s ease;
     }
     .route-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 22px 50px rgba(15,23,42,0.28);
-      border-color: rgba(59,130,246,0.9);
+      transform: translateY(-5px);
+      box-shadow:
+        0 26px 70px rgba(15,23,42,0.20),
+        0 0 0 0.5px rgba(191,219,254,0.9);
+      border-color: rgba(191,219,254,1);
+      background: rgba(255,255,255,0.98);
     }
     .route-card::before {
       content: '';
       display: block;
       width: 100%;
-      aspect-ratio: 3 / 1.4;
-      background: radial-gradient(circle at 0% 0%, #bfdbfe, #60a5fa);
+      aspect-ratio: 3 / 1.35;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(191,219,254,1), rgba(125,211,252,0.9)),
+        linear-gradient(135deg, #dbeafe, #eff6ff);
+      opacity: 0.95;
     }
     .route-inner {
-      padding: 12px 14px 10px;
+      padding: 14px 16px 10px;
     }
     .route-main {
       display: flex;
@@ -227,7 +247,8 @@
     }
     .route-title {
       font-size: 1rem;
-      color: #0f172a;
+      color: #020617;
+      letter-spacing: 0.02em;
     }
     .route-sub {
       font-size: 0.82rem;
@@ -399,7 +420,7 @@
     <header class="app-header">
       <div class="title-row">
         <div class="app-title">ROAD · NOTES</div>
-        <div class="app-subtitle">自驾游路线小册 · 记录每一段在路上的风景</div>
+        <div class="app-subtitle">自驾游路线小册</div>
       </div>
       <div class="summary-row">
         <span>目前共记录 <strong id="totalRoutes">0</strong> 条路线</span>
@@ -462,30 +483,6 @@
           note: '沿沈海高速+舟山跨海大桥，适合周末放空。'
         },
         {
-          id: 'R-002',
-          title: '川西小环线 · 秋色之旅',
-          from: '成都',
-          to: '新都桥 · 塔公草原 · 海螺沟',
-          days: 6,
-          distance: 1350,
-          date: '2024-10-12',
-          type: 'mountain',
-          tags: ['川西', '高原', '山路', '摄影'],
-          note: '高海拔路段较多，适合秋季看彩林和银河。'
-        },
-        {
-          id: 'R-003',
-          title: '环青海湖+茶卡 · 高原自驾',
-          from: '西宁',
-          to: '青海湖 · 茶卡盐湖',
-          days: 4,
-          distance: 780,
-          date: '2023-08-05',
-          type: 'long',
-          tags: ['湖泊', '高原', '环线'],
-          note: '适合夏季，注意防晒和昼夜温差。'
-        },
-        {
           id: 'R-004',
           title: '厦门 — 漳州东山岛海边露营',
           from: '厦门',
@@ -507,7 +504,6 @@
           date: '2025-01-31',
           type: 'mountain',
           tags: ['Australia', 'Queensland', 'NSW', '自驾', '海岸线'],
-          note: '按 PDF 整理：时间 / City / Hotel（可点击查看完整行程）。',
           itinerary: [
             {
               date: '2025-01-31',
@@ -526,7 +522,7 @@
               hotel: 'Meriton Suites Surfers Paradise',
               items: [
                 'The University of Queensland',
-                'Mount Cook（按原 PDF 记录）'
+                'Mount Cook'
               ]
             },
             {
