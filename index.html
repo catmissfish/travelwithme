@@ -273,6 +273,117 @@
       color: rgba(245,236,216,0.7);
       padding: 16px 10px 8px;
     }
+    .route-card.clickable { cursor: pointer; }
+    .route-card.clickable::after {
+      content: '查看行程';
+      position: absolute;
+      right: 12px;
+      bottom: 10px;
+      font-size: 0.74rem;
+      color: rgba(245,236,216,0.7);
+      border: 1px solid rgba(245,236,216,0.18);
+      background: rgba(0,0,0,0.28);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.62);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      width: min(980px, 100%);
+      max-height: min(86vh, 920px);
+      overflow: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(245,236,216,0.18);
+      background: radial-gradient(circle at top left, rgba(245,236,216,0.12), rgba(10,7,4,0.94));
+      box-shadow: 0 22px 60px rgba(0,0,0,0.78);
+      color: rgba(245,236,216,0.92);
+    }
+    .modal-header {
+      position: sticky;
+      top: 0;
+      background: linear-gradient(180deg, rgba(10,7,4,0.92), rgba(10,7,4,0.75));
+      border-bottom: 1px dashed rgba(245,236,216,0.18);
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .modal-title {
+      font-size: 1rem;
+      color: rgba(245,236,216,0.98);
+    }
+    .modal-subtitle {
+      font-size: 0.82rem;
+      color: rgba(245,236,216,0.72);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .modal-close {
+      border: 1px solid rgba(245,236,216,0.2);
+      background: rgba(0,0,0,0.25);
+      color: rgba(245,236,216,0.9);
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: border 0.15s ease, background 0.15s ease;
+      white-space: nowrap;
+    }
+    .modal-close:hover {
+      border-color: rgba(215,178,130,0.9);
+      background: rgba(215,178,130,0.12);
+    }
+    .itinerary {
+      padding: 10px 16px 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .day-item {
+      border: 1px solid rgba(245,236,216,0.16);
+      background: rgba(0,0,0,0.28);
+      border-radius: 14px;
+      padding: 12px 12px 10px;
+    }
+    .day-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .day-date {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+      color: rgba(245,236,216,0.96);
+      font-size: 0.92rem;
+    }
+    .day-city {
+      color: rgba(245,236,216,0.78);
+      font-size: 0.82rem;
+    }
+    .day-hotel {
+      font-size: 0.82rem;
+      color: rgba(245,236,216,0.9);
+    }
+    .day-hotel strong { color: rgba(215,178,130,0.95); }
+    .day-list {
+      margin-top: 6px;
+      padding-left: 18px;
+      color: rgba(245,236,216,0.78);
+      line-height: 1.6;
+      font-size: 0.84rem;
+    }
   </style>
 </head>
 <body>
@@ -311,6 +422,19 @@
         <div id="emptyState" class="empty-state" style="display:none;">没有匹配的路线，可以尝试换个关键词，或者稍后补充新的行程记录。</div>
       </section>
     </main>
+  </div>
+
+  <div class="modal-overlay" id="itineraryOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itineraryTitle">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="itineraryTitle">行程</div>
+          <div class="modal-subtitle" id="itinerarySubtitle"></div>
+        </div>
+        <button class="modal-close" type="button" id="itineraryClose">关闭</button>
+      </div>
+      <div class="itinerary" id="itineraryBody"></div>
+    </div>
   </div>
 
   <script>
@@ -364,6 +488,109 @@
           type: 'sea',
           tags: ['看海', '露营', '海岛'],
           note: '沿海 小众海滩较多，适合露营和拍照。'
+        },
+        {
+          id: 'R-2025-01-AU',
+          title: 'Australia 2025.01 · Brisbane → Sydney 海岸线自驾',
+          from: 'Brisbane',
+          to: 'Sydney',
+          days: 9,
+          distance: 0,
+          date: '2025-01-31',
+          type: 'mountain',
+          tags: ['Australia', 'Queensland', 'NSW', '自驾', '海岸线'],
+          note: '按 PDF 整理：时间 / City / Hotel（可点击查看完整行程）。',
+          itinerary: [
+            {
+              date: '2025-01-31',
+              city: 'Brisbane',
+              hotel: 'Hilton Brisbane',
+              items: [
+                '航班：Hangzhou → Brisbane（HGH-CAN CZ3512；CAN-BNE CZ381），08:30 抵达',
+                '机场取车',
+                'Story Bridge',
+                'South Bank Parklands'
+              ]
+            },
+            {
+              date: '2025-02-01',
+              city: 'Gold Coast',
+              hotel: 'Meriton Suites Surfers Paradise',
+              items: [
+                'The University of Queensland',
+                'Mount Cook（按原 PDF 记录）'
+              ]
+            },
+            {
+              date: '2025-02-02',
+              city: 'Gold Coast',
+              hotel: 'Meriton Suites Surfers Paradise',
+              items: [
+                'Brisbane → Gold Coast（约 1h）',
+                'Surfers Paradise'
+              ]
+            },
+            {
+              date: '2025-02-03',
+              city: 'Byron Bay',
+              hotel: 'Byron Bay',
+              items: [
+                'Gold Coast → Byron Bay（约 1h）',
+                'Byron Beach',
+                'Cape Byron Lighthouse'
+              ]
+            },
+            {
+              date: '2025-02-04',
+              city: 'Port Macquarie',
+              hotel: 'Sails Port Macquarie (EVT hotel)',
+              items: [
+                'Byron Bay → Coffs Harbour（约 2.5h）',
+                'The Big Banana Fun Park、Sealy Lookout',
+                'Coffs Harbour → Port Macquarie（约 2h）'
+              ]
+            },
+            {
+              date: '2025-02-05',
+              city: 'Port Stephens',
+              hotel: 'Anchorage Port Stephens',
+              items: [
+                'Lighthouse Beach',
+                'Koala Hospital、Town Beach',
+                'Tracking Point Lighthouse'
+              ]
+            },
+            {
+              date: '2025-02-06',
+              city: 'Sydney',
+              hotel: 'Sheraton Grand Sydney Hyde Park',
+              items: [
+                'Port Macquarie → Newcastle（约 2h）',
+                'Tomaree Head Summit Walk、Memorial Walk',
+                'Newcastle → Sydney（约 2.5h）'
+              ]
+            },
+            {
+              date: '2025-02-07',
+              city: 'Sydney',
+              hotel: 'Sheraton Grand Sydney Hyde Park',
+              items: [
+                'Manly Beach',
+                'Sydney Opera House',
+                'Observatory Hill'
+              ]
+            },
+            {
+              date: '2025-02-08',
+              city: 'Sydney',
+              hotel: '—',
+              items: [
+                'Fish Market、Sydney University',
+                '机场还车',
+                '返程航班：SYD-CAN CZ326；CAN-HGH CZ3849'
+              ]
+            }
+          ]
         }
       ];
 
@@ -374,6 +601,11 @@
       var totalRoutes = document.getElementById('totalRoutes');
       var latestDate = document.getElementById('latestDate');
       var filterRow = document.getElementById('filterRow');
+      var itineraryOverlay = document.getElementById('itineraryOverlay');
+      var itineraryClose = document.getElementById('itineraryClose');
+      var itineraryTitle = document.getElementById('itineraryTitle');
+      var itinerarySubtitle = document.getElementById('itinerarySubtitle');
+      var itineraryBody = document.getElementById('itineraryBody');
 
       function formatDate(d) {
         if (!d) return '-';
@@ -430,6 +662,8 @@
           filtered.forEach(function(r) {
             var card = document.createElement('article');
             card.className = 'route-card';
+            if (r.itinerary && r.itinerary.length) card.classList.add('clickable');
+            if (r.id) card.dataset.routeId = r.id;
 
             var title = document.createElement('div');
             title.className = 'route-main';
@@ -478,6 +712,76 @@
           });
         }
       }
+
+      function openItinerary(route) {
+        if (!route || !(route.itinerary && route.itinerary.length)) return;
+        itineraryTitle.textContent = route.title || '行程';
+        itinerarySubtitle.textContent = (route.from || '') + ' → ' + (route.to || '') + ' · ' + (route.days || '-') + ' 天';
+        itineraryBody.innerHTML = '';
+
+        route.itinerary.forEach(function(day) {
+          var wrap = document.createElement('div');
+          wrap.className = 'day-item';
+
+          var top = document.createElement('div');
+          top.className = 'day-top';
+
+          var left = document.createElement('div');
+          left.innerHTML =
+            '<div class="day-date">' + formatDate(day.date) + '</div>' +
+            '<div class="day-city">' + (day.city ? ('City：' + day.city) : '') + '</div>';
+
+          var right = document.createElement('div');
+          right.className = 'day-hotel';
+          right.innerHTML = '<strong>Hotel：</strong>' + (day.hotel || '—');
+
+          top.appendChild(left);
+          top.appendChild(right);
+
+          var ul = document.createElement('ul');
+          ul.className = 'day-list';
+          (day.items || []).forEach(function(txt) {
+            var li = document.createElement('li');
+            li.textContent = txt;
+            ul.appendChild(li);
+          });
+
+          wrap.appendChild(top);
+          if ((day.items || []).length) wrap.appendChild(ul);
+          itineraryBody.appendChild(wrap);
+        });
+
+        itineraryOverlay.classList.add('active');
+        itineraryOverlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeItinerary() {
+        itineraryOverlay.classList.remove('active');
+        itineraryOverlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      routesList.addEventListener('click', function(e) {
+        var card = e.target.closest('.route-card');
+        if (!card) return;
+        var id = card.dataset.routeId;
+        if (!id) return;
+        var route = routes.find(function(r) { return r.id === id; });
+        if (route && route.itinerary && route.itinerary.length) {
+          openItinerary(route);
+        }
+      });
+
+      itineraryClose.addEventListener('click', function() {
+        closeItinerary();
+      });
+      itineraryOverlay.addEventListener('click', function(e) {
+        if (e.target === itineraryOverlay) closeItinerary();
+      });
+      window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && itineraryOverlay.classList.contains('active')) closeItinerary();
+      });
 
       searchInput.addEventListener('input', function() {
         renderRoutes();
