@@ -199,9 +199,14 @@
     }
     .routes-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      grid-template-columns: 1fr;
       gap: 22px;
       margin-top: 4px;
+    }
+    @media (min-width: 768px) {
+      .routes-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
     .route-card {
       position: relative;
@@ -622,7 +627,7 @@
         },
         {
           id: 'R-2024-02-NZ',
-          title: 'New Zealand 2024.02 · Christchurch → Tekapo → Queenstown → Oamaru',
+          title: 'New Zealand 2024.02',
           from: 'Christchurch',
           to: 'Christchurch',
           days: 10,
@@ -734,7 +739,7 @@
         },
         {
           id: 'R-2024-09-NO',
-          title: 'Norway 2024.09 · Copenhagen → Voss → Sogndalsfjøra → Loen → Oslo → Gothenburg',
+          title: 'Norway 2024.09',
           from: 'Copenhagen',
           to: 'Copenhagen',
           days: 10,
@@ -742,6 +747,7 @@
           date: '2024-09-26',
           type: 'mountain',
           tags: ['Norway', 'Denmark', 'Fjords', 'Road trip'],
+          previewImage: 'Norway-route-preview.png',
           itinerary: [
             {
               date: '2024-09-26',
@@ -853,6 +859,7 @@
           date: '2023-09-26',
           type: 'mountain',
           tags: ['Switzerland', 'Germany', 'Alps', 'Road trip'],
+          previewImage: 'Switzerland-route-preview.png',
           itinerary: [
             {
               date: '2023-09-26',
