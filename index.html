@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>自驾游路线记录</title>
+  <title>Road Trip Routes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
@@ -317,7 +317,7 @@
     }
     .route-card.clickable { cursor: pointer; }
     .route-card.clickable::after {
-      content: '查看行程';
+      content: 'View itinerary';
       position: absolute;
       right: 12px;
       bottom: 10px;
@@ -475,35 +475,35 @@
     <header class="app-header">
       <div class="title-row">
         <div class="app-title">ROAD · NOTES</div>
-        <div class="app-subtitle">自驾游路线小册</div>
+        <div class="app-subtitle">Road trip notebook</div>
       </div>
       <div class="summary-row">
-        <span>目前共记录 <strong id="totalRoutes">0</strong> 条路线</span>
-        <span>最近出发时间：<strong id="latestDate">-</strong></span>
+        <span>Total <strong id="totalRoutes">0</strong> routes</span>
+        <span>Latest departure: <strong id="latestDate">-</strong></span>
       </div>
       <div class="search-bar">
         <div class="search-input-wrap">
           <span class="search-icon">🔍</span>
-          <input id="searchInput" type="search" placeholder="按目的地 / 出发地 / 关键字搜索，例如：挪威、布里斯班、基督城" autocomplete="off">
-          <span class="search-meta" id="matchCount">全部路线</span>
+          <input id="searchInput" type="search" placeholder="Search by origin / destination / keywords (e.g. Norway, Brisbane, Christchurch)" autocomplete="off">
+          <span class="search-meta" id="matchCount">All routes</span>
         </div>
         <div class="filter-row" id="filterRow">
-          <button class="chip active" data-filter="all"><span class="dot"></span>全部</button>
-          <button class="chip" data-filter="weekend">中国</button>
-          <button class="chip" data-filter="long">欧洲</button>
-          <button class="chip" data-filter="mountain">澳洲</button>
-          <button class="chip" data-filter="sea">新西兰</button>
+          <button class="chip active" data-filter="all"><span class="dot"></span>All</button>
+          <button class="chip" data-filter="weekend">China</button>
+          <button class="chip" data-filter="long">Europe</button>
+          <button class="chip" data-filter="mountain">Australia</button>
+          <button class="chip" data-filter="sea">New Zealand</button>
         </div>
       </div>
     </header>
 
     <main class="layout-main">
-      <section class="routes-panel" aria-label="自驾游路线列表">
+      <section class="routes-panel" aria-label="Road trip routes list">
         <div class="routes-header">
-          <span><strong>路线列表</strong> · 点击下方卡片即可快速浏览关键信息</span>
+          <span><strong>Routes</strong> · Click a card to view itinerary</span>
         </div>
         <div id="routesList" class="routes-list"></div>
-        <div id="emptyState" class="empty-state" style="display:none;">没有匹配的路线，可以尝试换个关键词，或者稍后补充新的行程记录。</div>
+        <div id="emptyState" class="empty-state" style="display:none;">No matching routes. Try a different keyword, or add a new trip.</div>
       </section>
     </main>
   </div>
@@ -512,10 +512,10 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itineraryTitle">
       <div class="modal-header">
         <div>
-          <div class="modal-title" id="itineraryTitle">行程</div>
+          <div class="modal-title" id="itineraryTitle">Itinerary</div>
           <div class="modal-subtitle" id="itinerarySubtitle"></div>
         </div>
-        <button class="modal-close" type="button" id="itineraryClose">关闭</button>
+        <button class="modal-close" type="button" id="itineraryClose">Close</button>
       </div>
       <div class="itinerary" id="itineraryBody"></div>
     </div>
@@ -523,38 +523,38 @@
 
   <script>
     (function() {
-      // 在这里维护你的自驾游路线数据
+      // Maintain your road trip routes here
       var routes = [
         {
           id: 'R-001',
-          title: '沪 — 舟山东海看海两日',
-          from: '上海',
-          to: '舟山朱家尖 · 东沙',
+          title: 'Shanghai → Zhoushan (East China Sea) · 2 days',
+          from: 'Shanghai',
+          to: 'Zhoushan · Zhujiajian · Dongsha',
           days: 2,
           distance: 520,
           date: '2025-09-30',
           type: 'weekend',
-          tags: ['看海', '跨海大桥', '海鲜'],
+          tags: ['Sea', 'Bridge', 'Seafood'],
           note: ''
         },
         {
           id: 'R-2025-01-AU',
-          title: 'Australia 2025.01 · Brisbane → Sydney 海岸线自驾',
+          title: 'Australia 2025.01 · Brisbane → Sydney coastal road trip',
           from: 'Brisbane',
           to: 'Sydney',
           days: 9,
           distance: 0,
           date: '2025-01-31',
           type: 'mountain',
-          tags: ['Australia', 'Queensland', 'NSW', '自驾', '海岸线'],
+          tags: ['Australia', 'Queensland', 'NSW', 'Road trip', 'Coast'],
           itinerary: [
             {
               date: '2025-01-31',
               city: 'Brisbane',
               hotel: 'Hilton Brisbane',
               items: [
-                '航班：Hangzhou → Brisbane（HGH-CAN CZ3512；CAN-BNE CZ381），08:30 抵达',
-                '机场取车',
+                'Flight: Hangzhou → Brisbane (HGH-CAN CZ3512; CAN-BNE CZ381), arrive 08:30',
+                'Pick up rental car at the airport',
                 'Story Bridge',
                 'South Bank Parklands'
               ]
@@ -573,7 +573,7 @@
               city: 'Gold Coast',
               hotel: 'Meriton Suites Surfers Paradise',
               items: [
-                'Brisbane → Gold Coast（约 1h）',
+                'Brisbane → Gold Coast (about 1h drive)',
                 'Surfers Paradise'
               ]
             },
@@ -582,7 +582,7 @@
               city: 'Byron Bay',
               hotel: 'Byron Bay',
               items: [
-                'Gold Coast → Byron Bay（约 1h）',
+                'Gold Coast → Byron Bay (about 1h drive)',
                 'Byron Beach',
                 'Cape Byron Lighthouse'
               ]
@@ -592,9 +592,9 @@
               city: 'Port Macquarie',
               hotel: 'Sails Port Macquarie (EVT hotel)',
               items: [
-                'Byron Bay → Coffs Harbour（约 2.5h）',
+                'Byron Bay → Coffs Harbour (about 2.5h drive)',
                 'The Big Banana Fun Park、Sealy Lookout',
-                'Coffs Harbour → Port Macquarie（约 2h）'
+                'Coffs Harbour → Port Macquarie (about 2h drive)'
               ]
             },
             {
@@ -612,9 +612,9 @@
               city: 'Sydney',
               hotel: 'Sheraton Grand Sydney Hyde Park',
               items: [
-                'Port Macquarie → Newcastle（约 2h）',
+                'Port Macquarie → Newcastle (about 2h drive)',
                 'Tomaree Head Summit Walk、Memorial Walk',
-                'Newcastle → Sydney（约 2.5h）'
+                'Newcastle → Sydney (about 2.5h drive)'
               ]
             },
             {
@@ -633,8 +633,120 @@
               hotel: '—',
               items: [
                 'Fish Market、Sydney University',
-                '机场还车',
-                '返程航班：SYD-CAN CZ326；CAN-HGH CZ3849'
+                'Return car at the airport',
+                'Flight home: SYD-CAN CZ326; CAN-HGH CZ3849'
+              ]
+            }
+          ]
+        },
+        {
+          id: 'R-2024-02-NZ',
+          title: 'New Zealand 2024.02 · Christchurch → Tekapo → Queenstown → Oamaru',
+          from: 'Christchurch',
+          to: 'Christchurch',
+          days: 10,
+          distance: 0,
+          date: '2024-02-04',
+          type: 'sea',
+          tags: ['New Zealand', 'South Island', 'Road trip'],
+          previewImage: 'assets/nz-route-preview.png',
+          itinerary: [
+            {
+              date: '2024-02-04',
+              city: 'Christchurch',
+              hotel: 'Chateau on the Park - Christchurch, a DoubleTree by Hilton',
+              items: [
+                'Flight: Hangzhou → Guangzhou (CZ3848), then Guangzhou → Christchurch (CZ617), arrive 17:20',
+                'Pick up rental car'
+              ]
+            },
+            {
+              date: '2024-02-05',
+              city: 'Lake Tekapo',
+              hotel: 'Luxury Lakeview Apartment (Airbnb) · 2 Sibbald Lane, Lake Tekapo',
+              items: [
+                'Christchurch: Hagley Park, Avon River punt (optional), The Arts Centre',
+                'Dinner: Carlton (about 1.8 km from hotel)',
+                'Drive to Lake Tekapo (about 3h)',
+                'Tekapo Lake walk (around 3h loop)',
+                'Church of the Good Shepherd, Mount John / Astro Cafe (Fri–Mon)',
+                'Tekapo hot springs & stargazing'
+              ]
+            },
+            {
+              date: '2024-02-06',
+              city: 'Lake Tekapo',
+              hotel: 'Luxury Lakeview Apartment (Airbnb) · 2 Sibbald Lane, Lake Tekapo',
+              items: [
+                'Mount Cook (driving stops): Peter’s Lookout',
+                'Hikes: Kea Point; Tasman Glacier Viewpoint (about 30 mins)',
+                'Alpine Lavender Farm',
+                'Food stops: Heritage Hotel; High Country Salmon'
+              ]
+            },
+            {
+              date: '2024-02-07',
+              city: 'Queenstown',
+              hotel: 'Airbnb · 4B Manata Lane, Queenstown, Otago 9300',
+              items: [
+                'Drive to Wanaka (about 2.5h): lunch + Lake Wanaka',
+                'Drive to Arrowtown (about 1h)',
+                'Drive to Queenstown (about 20 mins)'
+              ]
+            },
+            {
+              date: '2024-02-08',
+              city: 'Queenstown',
+              hotel: 'Airbnb · 4B Manata Lane, Queenstown, Otago 9300',
+              items: [
+                'Skyline gondola + luge',
+                'Dinner at a scenic restaurant (reservation recommended)'
+              ]
+            },
+            {
+              date: '2024-02-09',
+              city: 'Queenstown',
+              hotel: 'Airbnb · 4B Manata Lane, Queenstown, Otago 9300',
+              items: [
+                'TSS Earnslaw + Walter Peak Gourmet BBQ dining (3–4h): cruise + farm + lunch',
+                'Deer Park: animals & sunset (book tickets in advance)'
+              ]
+            },
+            {
+              date: '2024-02-10',
+              city: 'Queenstown',
+              hotel: 'Airbnb · 4B Manata Lane, Queenstown, Otago 9300',
+              items: [
+                'Queenstown photo spots: One Mile Car Park, Lake Wakatipu, Jack’s Point',
+                'Glenorchy: Red Shed, Wharf, Lagoon Walkway (loop < 2h), Paradise'
+              ]
+            },
+            {
+              date: '2024-02-11',
+              city: 'Oamaru',
+              hotel: 'Poshtel',
+              items: [
+                'Optional: Dunedin (about 3.5h drive): railway station, Otago Peninsula drive, Larnach Castle',
+                'Food stop: Moeraki - The Fishwife (lobster)',
+                'Drive to Oamaru (about 1.5h)'
+              ]
+            },
+            {
+              date: '2024-02-12',
+              city: 'Christchurch',
+              hotel: '—',
+              items: [
+                'Oamaru: city walk, Little Blue Penguin viewing',
+                'Drive back to Christchurch (about 3h)',
+                'Flight: Christchurch → Guangzhou (CZ618) 22:30–05:30'
+              ]
+            },
+            {
+              date: '2024-02-13',
+              city: 'Hangzhou',
+              hotel: '—',
+              items: [
+                'Flight: Guangzhou → Hangzhou (CZ3521) 08:10–10:20'
               ]
             }
           ]
@@ -657,9 +769,13 @@
 
       function formatDate(d) {
         if (!d) return '-';
-        var parts = d.split('-');
-        if (parts.length !== 3) return d;
-        return parts[0] + '年' + parts[1] + '月' + parts[2] + '日';
+        var parsed = new Date(d + 'T00:00:00');
+        if (isNaN(parsed.getTime())) return d;
+        try {
+          return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: '2-digit' }).format(parsed);
+        } catch (e) {
+          return d;
+        }
       }
 
       function initSummary() {
@@ -700,12 +816,12 @@
 
         if (!filtered.length) {
           emptyState.style.display = 'block';
-          matchCount.textContent = '0 条结果';
+          matchCount.textContent = '0 results';
         } else {
           emptyState.style.display = 'none';
           matchCount.textContent = filtered.length === routes.length
-            ? '全部路线'
-            : filtered.length + ' 条结果';
+            ? 'All routes'
+            : filtered.length + ' results';
 
           filtered.forEach(function(r) {
             var card = document.createElement('article');
@@ -715,7 +831,7 @@
 
             var stops = getStopsForRoute(r);
             var directionsUrl = buildGoogleDirectionsUrl(stops);
-            var staticMapUrl = buildGoogleStaticMapUrl(stops);
+            var staticMapUrl = r.previewImage ? r.previewImage : buildGoogleStaticMapUrl(stops);
             if (directionsUrl) card.dataset.directionsUrl = directionsUrl;
 
             var media = document.createElement('div');
@@ -723,7 +839,7 @@
             if (staticMapUrl) {
               var img = document.createElement('img');
               img.src = staticMapUrl;
-              img.alt = '路线预览图';
+              img.alt = 'Route preview';
               img.loading = 'lazy';
               media.appendChild(img);
             }
@@ -739,10 +855,10 @@
             var meta = document.createElement('div');
             meta.className = 'route-meta';
             meta.innerHTML =
-              '<div class="meta-pill"><span class="label">天数</span><span class="value">' +
+              '<div class="meta-pill"><span class="label">Days</span><span class="value">' +
               (r.days || '-') +
               '</span></div>' +
-              '<div class="meta-pill"><span class="label">里程</span><span class="value">' +
+              '<div class="meta-pill"><span class="label">Distance</span><span class="value">' +
               (r.distance ? r.distance + ' km' : '-') +
               '</span></div>';
 
@@ -821,7 +937,7 @@
 
       function buildGoogleStaticMapUrl(stops) {
         if (!stops || stops.length < 2) return '';
-        // Google Static Maps 通常需要 key；这里保留 key 空值也能让你后续补上即可生效
+        // Google Static Maps typically requires a key. Leave empty and fill later to enable.
         var size = '1200x675';
         var scale = 2;
         var path = 'weight:5|color:0x2563EBff|' + stops.join('|');
@@ -850,19 +966,19 @@
 
       function openItinerary(route) {
         if (!route || !(route.itinerary && route.itinerary.length)) return;
-        itineraryTitle.textContent = route.title || '行程';
-        itinerarySubtitle.textContent = (route.from || '') + ' → ' + (route.to || '') + ' · ' + (route.days || '-') + ' 天';
+        itineraryTitle.textContent = route.title || 'Itinerary';
+        itinerarySubtitle.textContent = (route.from || '') + ' → ' + (route.to || '') + ' · ' + (route.days || '-') + ' days';
         itineraryBody.innerHTML = '';
 
         var stops = getStopsForRoute(route);
         var directionsUrl = buildGoogleDirectionsUrl(stops);
-        var staticMapUrl = buildGoogleStaticMapUrl(stops);
+        var staticMapUrl = route.previewImage ? route.previewImage : buildGoogleStaticMapUrl(stops);
         if (staticMapUrl) {
           var mediaWrap = document.createElement('div');
           mediaWrap.className = 'modal-media';
           var img = document.createElement('img');
           img.src = staticMapUrl;
-          img.alt = '路线预览图';
+          img.alt = 'Route preview';
           img.loading = 'lazy';
           mediaWrap.appendChild(img);
           itineraryBody.appendChild(mediaWrap);
@@ -875,7 +991,7 @@
           link.href = directionsUrl;
           link.target = '_blank';
           link.rel = 'noopener noreferrer';
-          link.textContent = '在 Google 地图打开自驾路线';
+          link.textContent = 'Open driving route in Google Maps';
           actions.appendChild(link);
           itineraryBody.appendChild(actions);
         }
@@ -890,20 +1006,20 @@
           var left = document.createElement('div');
           left.innerHTML =
             '<div class="day-date">' + formatDate(day.date) + '</div>' +
-            '<div class="day-city">' + (day.city ? ('City：' + day.city) : '') + '</div>';
+            '<div class="day-city">' + (day.city ? ('City: ' + day.city) : '') + '</div>';
 
           var right = document.createElement('div');
           right.className = 'day-hotel';
           (function() {
             var hotelName = (day.hotel || '').trim();
             if (!hotelName || hotelName === '—') {
-              right.innerHTML = '<strong>Hotel：</strong>—';
+              right.innerHTML = '<strong>Hotel: </strong>—';
               return;
             }
             var query = (hotelName + ' ' + (day.city || '')).trim();
             var url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
             right.innerHTML =
-              '<strong>Hotel：</strong>' +
+              '<strong>Hotel: </strong>' +
               '<a href="' + url + '" target="_blank" rel="noopener noreferrer" ' +
               'style="color: rgba(215,178,130,0.95); text-decoration: none; border-bottom: 1px dashed rgba(215,178,130,0.55);">' +
               hotelName +
