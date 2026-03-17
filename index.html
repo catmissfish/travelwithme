@@ -72,6 +72,7 @@
       width: 100%;
       height: auto;
       object-fit: cover;
+      object-position: center center;
       transform-origin: center;
       transform: scale(1.01);
       filter: saturate(1.03) contrast(1.03);
@@ -1478,7 +1479,14 @@
           var idx = 0;
 
           function playCurrent() {
-            heroVideo.src = sources[idx];
+            var src = sources[idx];
+            heroVideo.src = src;
+            // Default framing
+            heroVideo.style.objectPosition = 'center center';
+            // For jm3, show more of the lower half
+            if (src.indexOf('jm3') !== -1) {
+              heroVideo.style.objectPosition = 'center 80%';
+            }
             heroVideo.play().catch(function() {});
           }
 
