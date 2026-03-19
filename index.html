@@ -428,6 +428,145 @@
       box-shadow: 0 14px 30px rgba(15,23,42,0.14);
       background: rgba(239,246,255,0.95);
     }
+    .budget-card {
+      margin: 12px 16px 2px;
+      border: 1px solid rgba(191,219,254,0.9);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 12px 28px rgba(15,23,42,0.10);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .budget-title {
+      font-size: 0.9rem;
+      color: #0f172a;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .budget-grid {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    @media (min-width: 860px) {
+      .budget-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    .budget-field {
+      display: grid;
+      gap: 4px;
+    }
+    .budget-field label {
+      font-size: 0.76rem;
+      color: rgba(71,85,105,0.95);
+    }
+    .budget-field input {
+      width: 100%;
+      border: 1px solid rgba(148,163,184,0.55);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.84rem;
+      color: #0f172a;
+      background: rgba(248,250,252,0.95);
+      outline: none;
+    }
+    .budget-field input:focus {
+      border-color: rgba(59,130,246,0.95);
+      box-shadow: 0 0 0 1px rgba(59,130,246,0.9);
+      background: #fff;
+    }
+    .budget-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .budget-link {
+      font-size: 0.76rem;
+      padding: 5px 9px;
+      border-radius: 999px;
+      text-decoration: none;
+      border: 1px solid rgba(191,219,254,0.95);
+      background: rgba(239,246,255,0.95);
+      color: rgba(30,64,175,0.98);
+    }
+    .budget-hotel-list {
+      display: grid;
+      gap: 6px;
+      border-top: 1px dashed rgba(148,163,184,0.45);
+      padding-top: 8px;
+    }
+    .budget-hotel-row {
+      display: grid;
+      gap: 6px;
+      grid-template-columns: 1.8fr 0.8fr 1fr;
+      align-items: center;
+    }
+    .budget-hotel-row .hotel-name {
+      font-size: 0.78rem;
+      color: rgba(30,41,59,0.95);
+      line-height: 1.4;
+    }
+    .budget-hotel-row .nights {
+      font-size: 0.76rem;
+      color: rgba(100,116,139,0.95);
+      text-align: center;
+    }
+    .budget-hotel-row input {
+      width: 100%;
+      border: 1px solid rgba(148,163,184,0.55);
+      border-radius: 9px;
+      padding: 7px 8px;
+      font-size: 0.8rem;
+      background: rgba(248,250,252,0.95);
+      color: #0f172a;
+      outline: none;
+    }
+    .budget-summary {
+      border-top: 1px dashed rgba(148,163,184,0.45);
+      padding-top: 10px;
+      display: grid;
+      gap: 5px;
+      font-size: 0.8rem;
+      color: rgba(51,65,85,0.95);
+    }
+    .budget-summary .total {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .budget-snapshot {
+      border-top: 1px dashed rgba(148,163,184,0.45);
+      padding-top: 8px;
+      display: grid;
+      gap: 8px;
+    }
+    .budget-snapshot-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .budget-btn {
+      border: 1px solid rgba(148,163,184,0.65);
+      background: rgba(255,255,255,0.92);
+      color: #1e3a8a;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .budget-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .budget-note {
+      font-size: 0.75rem;
+      color: rgba(100,116,139,0.95);
+      line-height: 1.5;
+    }
     .modal-header {
       position: sticky;
       top: 0;
@@ -1377,6 +1516,8 @@
           itineraryBody.appendChild(actions);
         }
 
+        itineraryBody.appendChild(buildBudgetPlanner(route));
+
         route.itinerary.forEach(function(day) {
           var wrap = document.createElement('div');
           wrap.className = 'day-item';
@@ -1426,6 +1567,316 @@
         itineraryOverlay.classList.add('active');
         itineraryOverlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
+      }
+
+      function buildBudgetPlanner(route) {
+        var card = document.createElement('section');
+        card.className = 'budget-card';
+
+        var title = document.createElement('div');
+        title.className = 'budget-title';
+        title.textContent = 'Budget Planner';
+        card.appendChild(title);
+
+        var grid = document.createElement('div');
+        grid.className = 'budget-grid';
+
+        var originField = document.createElement('div');
+        originField.className = 'budget-field';
+        originField.innerHTML = '<label>Departure city</label><input type="text" placeholder="e.g. Hangzhou / Shanghai / Beijing">';
+        var dateField = document.createElement('div');
+        dateField.className = 'budget-field';
+        dateField.innerHTML = '<label>Departure date</label><input type="date">';
+        var outboundField = document.createElement('div');
+        outboundField.className = 'budget-field';
+        outboundField.innerHTML = '<label>Outbound flight price</label><input type="number" min="0" step="1" placeholder="CNY">';
+        var returnField = document.createElement('div');
+        returnField.className = 'budget-field';
+        returnField.innerHTML = '<label>Return flight price</label><input type="number" min="0" step="1" placeholder="CNY">';
+
+        grid.appendChild(originField);
+        grid.appendChild(dateField);
+        grid.appendChild(outboundField);
+        grid.appendChild(returnField);
+        card.appendChild(grid);
+
+        var originInput = originField.querySelector('input');
+        var departDateInput = dateField.querySelector('input');
+        var outboundInput = outboundField.querySelector('input');
+        var returnInput = returnField.querySelector('input');
+
+        var links = document.createElement('div');
+        links.className = 'budget-links';
+        card.appendChild(links);
+
+        var hotelList = document.createElement('div');
+        hotelList.className = 'budget-hotel-list';
+        card.appendChild(hotelList);
+
+        var summary = document.createElement('div');
+        summary.className = 'budget-summary';
+        summary.innerHTML =
+          '<div>Round-trip flights: <strong data-flight-total>0</strong> CNY</div>' +
+          '<div>Hotels total: <strong data-hotel-total>0</strong> CNY</div>' +
+          '<div class="total">Estimated total: <span data-grand-total>0</span> CNY</div>';
+        card.appendChild(summary);
+
+        var snapshotBox = document.createElement('div');
+        snapshotBox.className = 'budget-snapshot';
+        snapshotBox.innerHTML =
+          '<div class="budget-snapshot-row">' +
+          '<button type="button" class="budget-btn" data-apply-snapshot>Use monthly snapshot</button>' +
+          '<button type="button" class="budget-btn" data-save-snapshot>Update snapshot (1st day only)</button>' +
+          '</div>' +
+          '<div class="budget-note" data-snapshot-note></div>';
+        card.appendChild(snapshotBox);
+
+        var flightTotalEl = summary.querySelector('[data-flight-total]');
+        var hotelTotalEl = summary.querySelector('[data-hotel-total]');
+        var grandTotalEl = summary.querySelector('[data-grand-total]');
+        var applySnapshotBtn = snapshotBox.querySelector('[data-apply-snapshot]');
+        var saveSnapshotBtn = snapshotBox.querySelector('[data-save-snapshot]');
+        var snapshotNoteEl = snapshotBox.querySelector('[data-snapshot-note]');
+
+        function parseNum(v) {
+          var n = Number(v);
+          return Number.isFinite(n) && n > 0 ? n : 0;
+        }
+
+        function monthKey(date) {
+          var y = date.getFullYear();
+          var m = String(date.getMonth() + 1).padStart(2, '0');
+          return y + '-' + m;
+        }
+
+        function snapshotStorageKey(routeId) {
+          return 'roadtrip_snapshot_' + routeId + '_' + monthKey(new Date());
+        }
+
+        function addDays(dateStr, delta) {
+          var d = new Date(dateStr + 'T00:00:00');
+          if (isNaN(d.getTime())) return dateStr;
+          d.setDate(d.getDate() + delta);
+          return d.toISOString().slice(0, 10);
+        }
+
+        function getHotelStays(itinerary) {
+          var stays = [];
+          var current = null;
+          (itinerary || []).forEach(function(day) {
+            var hotel = (day.hotel || '').trim();
+            if (!hotel || hotel === '—') {
+              current = null;
+              return;
+            }
+            if (!current || current.hotel !== hotel) {
+              current = {
+                hotel: hotel,
+                city: day.city || '',
+                checkIn: day.date || '',
+                checkOut: day.date || '',
+                nights: 1
+              };
+              stays.push(current);
+            } else {
+              current.nights += 1;
+              current.checkOut = day.date || current.checkOut;
+            }
+          });
+          return stays;
+        }
+
+        var stays = getHotelStays(route.itinerary);
+        var hotelInputs = [];
+        stays.forEach(function(stay) {
+          var row = document.createElement('div');
+          row.className = 'budget-hotel-row';
+          row.innerHTML =
+            '<div class="hotel-name">' + stay.hotel + '</div>' +
+            '<div class="nights">' + stay.nights + ' night' + (stay.nights > 1 ? 's' : '') + '</div>' +
+            '<input type="number" min="0" step="1" placeholder="per night CNY">';
+          var input = row.querySelector('input');
+          hotelInputs.push({ input: input, nights: stay.nights, stay: stay });
+          hotelList.appendChild(row);
+        });
+
+        function readCurrentValues() {
+          return {
+            origin: (originInput.value || '').trim(),
+            departDate: departDateInput.value || '',
+            outbound: parseNum(outboundInput.value),
+            inbound: parseNum(returnInput.value),
+            hotels: hotelInputs.map(function(h) {
+              return {
+                hotel: h.stay.hotel,
+                perNight: parseNum(h.input.value)
+              };
+            }),
+            updatedAt: new Date().toISOString()
+          };
+        }
+
+        function applySnapshot(snapshot) {
+          if (!snapshot) return;
+          if (snapshot.origin) originInput.value = snapshot.origin;
+          if (snapshot.departDate) departDateInput.value = snapshot.departDate;
+          if (snapshot.outbound) outboundInput.value = String(snapshot.outbound);
+          if (snapshot.inbound) returnInput.value = String(snapshot.inbound);
+          var map = {};
+          (snapshot.hotels || []).forEach(function(h) {
+            map[h.hotel] = h.perNight;
+          });
+          hotelInputs.forEach(function(h) {
+            var v = map[h.stay.hotel];
+            h.input.value = v ? String(v) : '';
+          });
+          rebuildLinks();
+          recalcBudget();
+        }
+
+        function getSavedSnapshot() {
+          try {
+            var raw = localStorage.getItem(snapshotStorageKey(route.id || 'route'));
+            return raw ? JSON.parse(raw) : null;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function setSnapshotNote(text) {
+          snapshotNoteEl.textContent = text;
+        }
+
+        function refreshSnapshotNote() {
+          var snap = getSavedSnapshot();
+          var today = new Date();
+          var mk = monthKey(today);
+          var firstDay = today.getDate() === 1;
+          saveSnapshotBtn.disabled = !firstDay;
+          saveSnapshotBtn.title = firstDay ? '' : 'Only enabled on the 1st day of each month';
+          if (snap) {
+            var time = snap.updatedAt ? new Date(snap.updatedAt).toLocaleString() : 'unknown';
+            setSnapshotNote(
+              'Monthly snapshot (' + mk + ') loaded. Last updated: ' + time +
+              '. Data remains fixed for this month.'
+            );
+          } else {
+            setSnapshotNote(
+              'No snapshot for ' + mk + '. On the 1st day, update once and reuse the same baseline all month.'
+            );
+          }
+        }
+
+        function rebuildLinks() {
+          links.innerHTML = '';
+          var origin = (originInput.value || '').trim();
+          var depDate = departDateInput.value || '';
+          var starts = getStopsForRoute(route);
+          var tripStart = starts.length ? starts[0] : (route.from || '');
+          var tripEnd = starts.length ? starts[starts.length - 1] : (route.to || '');
+          if (origin && tripStart && depDate) {
+            var outDate = depDate;
+            var inDate = addDays(depDate, Number(route.days || 0));
+            var gfOut = document.createElement('a');
+            gfOut.className = 'budget-link';
+            gfOut.target = '_blank';
+            gfOut.rel = 'noopener noreferrer';
+            gfOut.textContent = 'Search outbound flight (Google Flights)';
+            gfOut.href =
+              'https://www.google.com/travel/flights?hl=en#flt=' +
+              encodeURIComponent(origin) + '.' + encodeURIComponent(tripStart) + '.' + outDate;
+            links.appendChild(gfOut);
+
+            var gfIn = document.createElement('a');
+            gfIn.className = 'budget-link';
+            gfIn.target = '_blank';
+            gfIn.rel = 'noopener noreferrer';
+            gfIn.textContent = 'Search return flight (Google Flights)';
+            gfIn.href =
+              'https://www.google.com/travel/flights?hl=en#flt=' +
+              encodeURIComponent(tripEnd) + '.' + encodeURIComponent(origin) + '.' + inDate;
+            links.appendChild(gfIn);
+          }
+
+          hotelInputs.forEach(function(h) {
+            var city = (h.stay.city || '').trim();
+            var checkIn = h.stay.checkIn || '';
+            var checkOut = addDays(h.stay.checkOut || checkIn, 1);
+            var booking = document.createElement('a');
+            booking.className = 'budget-link';
+            booking.target = '_blank';
+            booking.rel = 'noopener noreferrer';
+            booking.textContent = 'Booking: ' + h.stay.hotel.slice(0, 20);
+            booking.href =
+              'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(h.stay.hotel + ' ' + city) +
+              '&checkin=' + checkIn + '&checkout=' + checkOut;
+            links.appendChild(booking);
+
+            var expedia = document.createElement('a');
+            expedia.className = 'budget-link';
+            expedia.target = '_blank';
+            expedia.rel = 'noopener noreferrer';
+            expedia.textContent = 'Expedia: ' + h.stay.hotel.slice(0, 20);
+            expedia.href =
+              'https://www.expedia.com/Hotel-Search?destination=' + encodeURIComponent(city || h.stay.hotel) +
+              '&startDate=' + checkIn + '&endDate=' + checkOut;
+            links.appendChild(expedia);
+          });
+        }
+
+        function recalcBudget() {
+          var flightTotal = parseNum(outboundInput.value) + parseNum(returnInput.value);
+          var hotelTotal = hotelInputs.reduce(function(sum, h) {
+            return sum + parseNum(h.input.value) * h.nights;
+          }, 0);
+          var grand = flightTotal + hotelTotal;
+          flightTotalEl.textContent = String(Math.round(flightTotal));
+          hotelTotalEl.textContent = String(Math.round(hotelTotal));
+          grandTotalEl.textContent = String(Math.round(grand));
+        }
+
+        [originInput, departDateInput].forEach(function(el) {
+          el.addEventListener('input', rebuildLinks);
+        });
+        [outboundInput, returnInput].forEach(function(el) {
+          el.addEventListener('input', recalcBudget);
+        });
+        hotelInputs.forEach(function(h) {
+          h.input.addEventListener('input', recalcBudget);
+        });
+
+        applySnapshotBtn.addEventListener('click', function() {
+          var snap = getSavedSnapshot();
+          if (!snap) {
+            setSnapshotNote('No monthly snapshot found for this month yet.');
+            return;
+          }
+          applySnapshot(snap);
+          setSnapshotNote('Monthly snapshot applied.');
+        });
+
+        saveSnapshotBtn.addEventListener('click', function() {
+          var today = new Date();
+          if (today.getDate() !== 1) {
+            setSnapshotNote('Update is allowed only on the 1st day of each month.');
+            return;
+          }
+          var payload = readCurrentValues();
+          try {
+            localStorage.setItem(snapshotStorageKey(route.id || 'route'), JSON.stringify(payload));
+            refreshSnapshotNote();
+            setSnapshotNote('Snapshot updated for this month and locked as baseline.');
+          } catch (e) {
+            setSnapshotNote('Failed to save snapshot. Please check browser storage availability.');
+          }
+        });
+
+        rebuildLinks();
+        recalcBudget();
+        var initialSnapshot = getSavedSnapshot();
+        if (initialSnapshot) applySnapshot(initialSnapshot);
+        refreshSnapshotNote();
+        return card;
       }
 
       function closeItinerary() {
