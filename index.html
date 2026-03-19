@@ -639,15 +639,16 @@
       background: rgba(219,234,254,0.9);
     }
     .itinerary {
-      padding: 10px 16px 16px;
+      padding: 14px 18px 20px;
       display: grid;
-      gap: 10px;
+      gap: 16px;
     }
     .day-item {
       border: 1px solid rgba(209,213,219,0.9);
       background: rgba(255,255,255,0.95);
       border-radius: 14px;
-      padding: 12px 12px 10px;
+      padding: 16px 16px 14px;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.06);
     }
     .day-top {
       display: flex;
@@ -655,7 +656,7 @@
       justify-content: space-between;
       gap: 10px;
       flex-wrap: wrap;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     .day-date {
       font-variant-numeric: tabular-nums;
@@ -673,10 +674,10 @@
     }
     .day-hotel strong { color: rgba(37,99,235,0.95); }
     .day-list {
-      margin-top: 6px;
-      padding-left: 18px;
+      margin-top: 8px;
+      padding-left: 20px;
       color: rgba(71,85,105,0.96);
-      line-height: 1.6;
+      line-height: 1.75;
       font-size: 0.84rem;
     }
   </style>
@@ -1780,7 +1781,7 @@
         function applySnapshot(snapshot) {
           if (!snapshot) return;
           if (snapshot.origin) originInput.value = snapshot.origin;
-          if (snapshot.departDate) departDateInput.value = snapshot.departDate;
+          // Keep user's currently selected date; do not overwrite here.
           if (snapshot.outbound) outboundInput.value = String(snapshot.outbound);
           if (snapshot.inbound) returnInput.value = String(snapshot.inbound);
           var map = {};
@@ -1836,6 +1837,37 @@
           return 2500;
         }
 
+        function monthSeasonFactor(mk) {
+          // Baseline by month (using the 1st day snapshot concept).
+          var m = Number((mk || '').split('-')[1] || 0);
+          if (!m) return 1;
+          // Higher in summer + major holiday windows, lower in shoulder seasons.
+          var table = {
+            1: 1.22,
+            2: 1.06,
+            3: 0.94,
+            4: 0.97,
+            5: 1.05,
+            6: 1.13,
+            7: 1.26,
+            8: 1.24,
+            9: 1.08,
+            10: 1.03,
+            11: 0.91,
+            12: 1.18
+          };
+          return table[m] || 1;
+        }
+
+        function routeMonthNoise(routeId, mk) {
+          // Deterministic tiny offset so different routes/months don't look identical.
+          var s = String(routeId || '') + '|' + String(mk || '');
+          var hash = 0;
+          for (var i = 0; i < s.length; i++) hash = ((hash << 5) - hash) + s.charCodeAt(i);
+          var n = Math.abs(hash % 9); // 0..8
+          return 0.96 + n * 0.01;     // 0.96 .. 1.04
+        }
+
         function estimateHotelPerNight(stay, routeObj) {
           var hotelText = ((stay.hotel || '') + ' ' + (stay.city || '')).toLowerCase();
           var tags = (routeObj.tags || []).join(' ').toLowerCase();
@@ -1862,16 +1894,18 @@
 
           setTimeout(function() {
             var origin = (originInput.value || '').trim();
-            var oneWay = estimateFlightOneWay(origin, route);
+            var seasonFactor = monthSeasonFactor(mk) * routeMonthNoise(route.id || 'route', mk);
+            var oneWay = Math.round(estimateFlightOneWay(origin, route) * seasonFactor / 10) * 10;
             var payload = {
               origin: origin,
-              departDate: departDateInput.value || '',
+              departDate: mk + '-01',
               outbound: oneWay,
               inbound: oneWay,
               hotels: stays.map(function(stay) {
+                var hotel = Math.round(estimateHotelPerNight(stay, route) * seasonFactor / 10) * 10;
                 return {
                   hotel: stay.hotel,
-                  perNight: estimateHotelPerNight(stay, route)
+                  perNight: hotel
                 };
               }),
               updatedAt: new Date().toISOString(),
