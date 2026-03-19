@@ -1539,9 +1539,9 @@
           mediaWrap.appendChild(img);
           itineraryBody.appendChild(mediaWrap);
         }
+        var actions = document.createElement('div');
+        actions.className = 'modal-actions';
         if (directionsUrl) {
-          var actions = document.createElement('div');
-          actions.className = 'modal-actions';
           var link = document.createElement('a');
           link.className = 'modal-link';
           link.href = directionsUrl;
@@ -1549,10 +1549,13 @@
           link.rel = 'noopener noreferrer';
           link.textContent = 'Open driving route in Google Maps';
           actions.appendChild(link);
-          itineraryBody.appendChild(actions);
         }
 
-        itineraryBody.appendChild(buildBudgetPlanner(route));
+        var budgetPlanner = buildBudgetPlanner(route, actions);
+        if (actions.children.length) {
+          itineraryBody.appendChild(actions);
+        }
+        itineraryBody.appendChild(budgetPlanner);
 
         route.itinerary.forEach(function(day) {
           var wrap = document.createElement('div');
@@ -1605,7 +1608,7 @@
         document.body.style.overflow = 'hidden';
       }
 
-      function buildBudgetPlanner(route) {
+      function buildBudgetPlanner(route, inlineHost) {
         var card = document.createElement('section');
         card.className = 'budget-card';
 
@@ -1616,14 +1619,15 @@
         var toggleBtn = document.createElement('button');
         toggleBtn.type = 'button';
         toggleBtn.className = 'budget-toggle';
-        toggleBtn.textContent = '帮我预估';
-        var toggleHint = document.createElement('span');
-        toggleHint.className = 'budget-toggle-hint';
-        toggleHint.textContent = '每月仅1号更新当月价格基准';
-        headRight.appendChild(toggleHint);
+        toggleBtn.textContent = 'Estimate budget';
         headRight.appendChild(toggleBtn);
         head.appendChild(headRight);
         card.appendChild(head);
+
+        if (inlineHost) {
+          inlineHost.appendChild(headRight);
+          head.style.display = 'none';
+        }
 
         var contentWrap = document.createElement('div');
         contentWrap.className = 'budget-content';
@@ -1809,12 +1813,12 @@
 
         function setEstimateLoading(loading) {
           if (loading) {
-            prevToggleText = toggleBtn.textContent || '帮我预估';
-            toggleBtn.textContent = '加载中...';
+            prevToggleText = toggleBtn.textContent || 'Estimate budget';
+            toggleBtn.textContent = 'Loading...';
             toggleBtn.disabled = true;
           } else {
             toggleBtn.disabled = false;
-            toggleBtn.textContent = card.classList.contains('expanded') ? '收起预估' : '帮我预估';
+            toggleBtn.textContent = card.classList.contains('expanded') ? 'Hide estimator' : 'Estimate budget';
           }
         }
 
@@ -1978,7 +1982,7 @@
 
         toggleBtn.addEventListener('click', function() {
           var expanded = card.classList.toggle('expanded');
-          toggleBtn.textContent = expanded ? '收起预估' : '帮我预估';
+          toggleBtn.textContent = expanded ? 'Hide estimator' : 'Estimate budget';
         });
 
         return card;
