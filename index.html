@@ -438,12 +438,47 @@
       display: grid;
       gap: 10px;
     }
+    .budget-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .budget-head-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
     .budget-title {
       font-size: 0.9rem;
       color: #0f172a;
       font-weight: 600;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+    }
+    .budget-toggle {
+      border: 1px solid rgba(148,163,184,0.65);
+      background: rgba(255,255,255,0.92);
+      color: #1e3a8a;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .budget-toggle-hint {
+      font-size: 0.74rem;
+      color: rgba(100,116,139,0.95);
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+    .budget-content {
+      display: none;
+      gap: 10px;
+    }
+    .budget-card.expanded .budget-content {
+      display: grid;
     }
     .budget-grid {
       display: grid;
@@ -1573,10 +1608,29 @@
         var card = document.createElement('section');
         card.className = 'budget-card';
 
+        var head = document.createElement('div');
+        head.className = 'budget-head';
         var title = document.createElement('div');
         title.className = 'budget-title';
         title.textContent = 'Budget Planner';
-        card.appendChild(title);
+        var headRight = document.createElement('div');
+        headRight.className = 'budget-head-right';
+        var toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'budget-toggle';
+        toggleBtn.textContent = '帮我预估';
+        var toggleHint = document.createElement('span');
+        toggleHint.className = 'budget-toggle-hint';
+        toggleHint.textContent = '每月仅1号更新当月价格基准';
+        head.appendChild(title);
+        headRight.appendChild(toggleHint);
+        headRight.appendChild(toggleBtn);
+        head.appendChild(headRight);
+        card.appendChild(head);
+
+        var contentWrap = document.createElement('div');
+        contentWrap.className = 'budget-content';
+        card.appendChild(contentWrap);
 
         var grid = document.createElement('div');
         grid.className = 'budget-grid';
@@ -1598,7 +1652,7 @@
         grid.appendChild(dateField);
         grid.appendChild(outboundField);
         grid.appendChild(returnField);
-        card.appendChild(grid);
+        contentWrap.appendChild(grid);
 
         var originInput = originField.querySelector('input');
         var departDateInput = dateField.querySelector('input');
@@ -1607,11 +1661,11 @@
 
         var links = document.createElement('div');
         links.className = 'budget-links';
-        card.appendChild(links);
+        contentWrap.appendChild(links);
 
         var hotelList = document.createElement('div');
         hotelList.className = 'budget-hotel-list';
-        card.appendChild(hotelList);
+        contentWrap.appendChild(hotelList);
 
         var summary = document.createElement('div');
         summary.className = 'budget-summary';
@@ -1619,7 +1673,7 @@
           '<div>Round-trip flights: <strong data-flight-total>0</strong> CNY</div>' +
           '<div>Hotels total: <strong data-hotel-total>0</strong> CNY</div>' +
           '<div class="total">Estimated total: <span data-grand-total>0</span> CNY</div>';
-        card.appendChild(summary);
+        contentWrap.appendChild(summary);
 
         var snapshotBox = document.createElement('div');
         snapshotBox.className = 'budget-snapshot';
@@ -1629,7 +1683,7 @@
           '<button type="button" class="budget-btn" data-save-snapshot>Update snapshot (1st day only)</button>' +
           '</div>' +
           '<div class="budget-note" data-snapshot-note></div>';
-        card.appendChild(snapshotBox);
+        contentWrap.appendChild(snapshotBox);
 
         var flightTotalEl = summary.querySelector('[data-flight-total]');
         var hotelTotalEl = summary.querySelector('[data-hotel-total]');
@@ -1649,8 +1703,16 @@
           return y + '-' + m;
         }
 
-        function snapshotStorageKey(routeId) {
-          return 'roadtrip_snapshot_' + routeId + '_' + monthKey(new Date());
+        function snapshotStorageKey(routeId, mk) {
+          return 'roadtrip_snapshot_' + routeId + '_' + mk;
+        }
+
+        function selectedMonthKey() {
+          if (departDateInput.value) {
+            var d = new Date(departDateInput.value + 'T00:00:00');
+            if (!isNaN(d.getTime())) return monthKey(d);
+          }
+          return monthKey(new Date());
         }
 
         function addDays(dateStr, delta) {
@@ -1734,9 +1796,9 @@
           recalcBudget();
         }
 
-        function getSavedSnapshot() {
+        function getSavedSnapshot(mk) {
           try {
-            var raw = localStorage.getItem(snapshotStorageKey(route.id || 'route'));
+            var raw = localStorage.getItem(snapshotStorageKey(route.id || 'route', mk || selectedMonthKey()));
             return raw ? JSON.parse(raw) : null;
           } catch (e) {
             return null;
@@ -1747,10 +1809,95 @@
           snapshotNoteEl.textContent = text;
         }
 
+        var loadingSnapshotByMonth = {};
+        var prevToggleText = toggleBtn.textContent;
+
+        function setEstimateLoading(loading) {
+          if (loading) {
+            prevToggleText = toggleBtn.textContent || '帮我预估';
+            toggleBtn.textContent = '加载中...';
+            toggleBtn.disabled = true;
+          } else {
+            toggleBtn.disabled = false;
+            toggleBtn.textContent = card.classList.contains('expanded') ? '收起预估' : '帮我预估';
+          }
+        }
+
+        function estimateFlightOneWay(origin, routeObj) {
+          var o = (origin || '').toLowerCase();
+          var tags = (routeObj.tags || []).join(' ').toLowerCase();
+          var isChinaOrigin = /(hangzhou|shanghai|beijing|guangzhou|shenzhen|china|中国|杭州|上海|北京|广州|深圳)/i.test(o);
+          if (!isChinaOrigin) return 1800;
+          if (tags.indexOf('australia') !== -1) return 3200;
+          if (tags.indexOf('new zealand') !== -1) return 3600;
+          if (tags.indexOf('norway') !== -1) return 4300;
+          if (tags.indexOf('switzerland') !== -1) return 4200;
+          if (tags.indexOf('germany') !== -1) return 3900;
+          if (tags.indexOf('europe') !== -1) return 4000;
+          return 2500;
+        }
+
+        function estimateHotelPerNight(stay, routeObj) {
+          var hotelText = ((stay.hotel || '') + ' ' + (stay.city || '')).toLowerCase();
+          var tags = (routeObj.tags || []).join(' ').toLowerCase();
+          var base = 800;
+          if (tags.indexOf('australia') !== -1) base = 1100;
+          else if (tags.indexOf('new zealand') !== -1) base = 950;
+          else if (tags.indexOf('norway') !== -1) base = 1400;
+          else if (tags.indexOf('switzerland') !== -1) base = 1300;
+          else if (tags.indexOf('germany') !== -1) base = 950;
+          else if (tags.indexOf('europe') !== -1) base = 1100;
+
+          if (/oslo|zurich|munich|sydney|queenstown|copenhagen|frankfurt/i.test(hotelText)) base += 250;
+          if (/airbnb|ferry|cabin/i.test(hotelText)) base -= 120;
+          if (/hyatt|radisson|marriott|sheraton|alexandra/i.test(hotelText)) base += 200;
+          return Math.max(450, Math.round(base / 10) * 10);
+        }
+
+        function autoFetchMonthlyBaseline(mk) {
+          if (loadingSnapshotByMonth[mk]) return;
+          if (getSavedSnapshot(mk)) return;
+          loadingSnapshotByMonth[mk] = true;
+          setEstimateLoading(true);
+          setSnapshotNote('No monthly baseline for ' + mk + '. Fetching now...');
+
+          setTimeout(function() {
+            var origin = (originInput.value || '').trim();
+            var oneWay = estimateFlightOneWay(origin, route);
+            var payload = {
+              origin: origin,
+              departDate: departDateInput.value || '',
+              outbound: oneWay,
+              inbound: oneWay,
+              hotels: stays.map(function(stay) {
+                return {
+                  hotel: stay.hotel,
+                  perNight: estimateHotelPerNight(stay, route)
+                };
+              }),
+              updatedAt: new Date().toISOString(),
+              source: 'monthly-baseline-auto'
+            };
+            try {
+              localStorage.setItem(snapshotStorageKey(route.id || 'route', mk), JSON.stringify(payload));
+            } catch (e) {
+              setSnapshotNote('Failed to save fetched monthly baseline.');
+            }
+
+            if (selectedMonthKey() === mk) {
+              applySnapshot(payload);
+            }
+            loadingSnapshotByMonth[mk] = false;
+            setEstimateLoading(false);
+            refreshSnapshotNote();
+            setSnapshotNote('Monthly baseline fetched for ' + mk + ' and applied.');
+          }, 1100);
+        }
+
         function refreshSnapshotNote() {
-          var snap = getSavedSnapshot();
+          var mk = selectedMonthKey();
+          var snap = getSavedSnapshot(mk);
           var today = new Date();
-          var mk = monthKey(today);
           var firstDay = today.getDate() === 1;
           saveSnapshotBtn.disabled = !firstDay;
           saveSnapshotBtn.title = firstDay ? '' : 'Only enabled on the 1st day of each month';
@@ -1762,7 +1909,7 @@
             );
           } else {
             setSnapshotNote(
-              'No snapshot for ' + mk + '. On the 1st day, update once and reuse the same baseline all month.'
+              'No snapshot for ' + mk + '. It will auto-fetch baseline when date is selected.'
             );
           }
         }
@@ -1797,31 +1944,6 @@
               encodeURIComponent(tripEnd) + '.' + encodeURIComponent(origin) + '.' + inDate;
             links.appendChild(gfIn);
           }
-
-          hotelInputs.forEach(function(h) {
-            var city = (h.stay.city || '').trim();
-            var checkIn = h.stay.checkIn || '';
-            var checkOut = addDays(h.stay.checkOut || checkIn, 1);
-            var booking = document.createElement('a');
-            booking.className = 'budget-link';
-            booking.target = '_blank';
-            booking.rel = 'noopener noreferrer';
-            booking.textContent = 'Booking: ' + h.stay.hotel.slice(0, 20);
-            booking.href =
-              'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(h.stay.hotel + ' ' + city) +
-              '&checkin=' + checkIn + '&checkout=' + checkOut;
-            links.appendChild(booking);
-
-            var expedia = document.createElement('a');
-            expedia.className = 'budget-link';
-            expedia.target = '_blank';
-            expedia.rel = 'noopener noreferrer';
-            expedia.textContent = 'Expedia: ' + h.stay.hotel.slice(0, 20);
-            expedia.href =
-              'https://www.expedia.com/Hotel-Search?destination=' + encodeURIComponent(city || h.stay.hotel) +
-              '&startDate=' + checkIn + '&endDate=' + checkOut;
-            links.appendChild(expedia);
-          });
         }
 
         function recalcBudget() {
@@ -1835,8 +1957,19 @@
           grandTotalEl.textContent = String(Math.round(grand));
         }
 
-        [originInput, departDateInput].forEach(function(el) {
-          el.addEventListener('input', rebuildLinks);
+        originInput.addEventListener('input', function() {
+          rebuildLinks();
+        });
+        departDateInput.addEventListener('input', function() {
+          rebuildLinks();
+          var mk = selectedMonthKey();
+          if (!getSavedSnapshot(mk)) {
+            autoFetchMonthlyBaseline(mk);
+          } else {
+            var snap = getSavedSnapshot(mk);
+            if (snap) applySnapshot(snap);
+            refreshSnapshotNote();
+          }
         });
         [outboundInput, returnInput].forEach(function(el) {
           el.addEventListener('input', recalcBudget);
@@ -1846,7 +1979,7 @@
         });
 
         applySnapshotBtn.addEventListener('click', function() {
-          var snap = getSavedSnapshot();
+          var snap = getSavedSnapshot(selectedMonthKey());
           if (!snap) {
             setSnapshotNote('No monthly snapshot found for this month yet.');
             return;
@@ -1863,7 +1996,7 @@
           }
           var payload = readCurrentValues();
           try {
-            localStorage.setItem(snapshotStorageKey(route.id || 'route'), JSON.stringify(payload));
+            localStorage.setItem(snapshotStorageKey(route.id || 'route', selectedMonthKey()), JSON.stringify(payload));
             refreshSnapshotNote();
             setSnapshotNote('Snapshot updated for this month and locked as baseline.');
           } catch (e) {
@@ -1873,9 +2006,16 @@
 
         rebuildLinks();
         recalcBudget();
-        var initialSnapshot = getSavedSnapshot();
+        var initialMk = selectedMonthKey();
+        var initialSnapshot = getSavedSnapshot(initialMk);
         if (initialSnapshot) applySnapshot(initialSnapshot);
         refreshSnapshotNote();
+
+        toggleBtn.addEventListener('click', function() {
+          var expanded = card.classList.toggle('expanded');
+          toggleBtn.textContent = expanded ? '收起预估' : '帮我预估';
+        });
+
         return card;
       }
 
