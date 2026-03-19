@@ -429,19 +429,14 @@
       background: rgba(239,246,255,0.95);
     }
     .budget-card {
-      margin: 12px 16px 2px;
-      border: 1px solid rgba(191,219,254,0.9);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.96);
-      box-shadow: 0 12px 28px rgba(15,23,42,0.10);
-      padding: 12px;
+      margin: 8px 16px 2px;
       display: grid;
-      gap: 10px;
+      gap: 8px;
     }
     .budget-head {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 10px;
     }
     .budget-head-right {
@@ -462,10 +457,11 @@
       border: 1px solid rgba(148,163,184,0.65);
       background: rgba(255,255,255,0.92);
       color: #1e3a8a;
-      border-radius: 10px;
-      padding: 6px 10px;
+      border-radius: 999px;
+      padding: 7px 12px;
       font-size: 0.78rem;
       cursor: pointer;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.08);
     }
     .budget-toggle-hint {
       font-size: 0.74rem;
@@ -476,6 +472,11 @@
     .budget-content {
       display: none;
       gap: 10px;
+      border: 1px solid rgba(191,219,254,0.9);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 12px 28px rgba(15,23,42,0.10);
+      padding: 12px;
     }
     .budget-card.expanded .budget-content {
       display: grid;
@@ -1610,9 +1611,6 @@
 
         var head = document.createElement('div');
         head.className = 'budget-head';
-        var title = document.createElement('div');
-        title.className = 'budget-title';
-        title.textContent = 'Budget Planner';
         var headRight = document.createElement('div');
         headRight.className = 'budget-head-right';
         var toggleBtn = document.createElement('button');
@@ -1622,7 +1620,6 @@
         var toggleHint = document.createElement('span');
         toggleHint.className = 'budget-toggle-hint';
         toggleHint.textContent = '每月仅1号更新当月价格基准';
-        head.appendChild(title);
         headRight.appendChild(toggleHint);
         headRight.appendChild(toggleBtn);
         head.appendChild(headRight);
@@ -1631,6 +1628,11 @@
         var contentWrap = document.createElement('div');
         contentWrap.className = 'budget-content';
         card.appendChild(contentWrap);
+
+        var title = document.createElement('div');
+        title.className = 'budget-title';
+        title.textContent = 'Budget Planner';
+        contentWrap.appendChild(title);
 
         var grid = document.createElement('div');
         grid.className = 'budget-grid';
@@ -1677,19 +1679,12 @@
 
         var snapshotBox = document.createElement('div');
         snapshotBox.className = 'budget-snapshot';
-        snapshotBox.innerHTML =
-          '<div class="budget-snapshot-row">' +
-          '<button type="button" class="budget-btn" data-apply-snapshot>Use monthly snapshot</button>' +
-          '<button type="button" class="budget-btn" data-save-snapshot>Update snapshot (1st day only)</button>' +
-          '</div>' +
-          '<div class="budget-note" data-snapshot-note></div>';
+        snapshotBox.innerHTML = '<div class="budget-note" data-snapshot-note></div>';
         contentWrap.appendChild(snapshotBox);
 
         var flightTotalEl = summary.querySelector('[data-flight-total]');
         var hotelTotalEl = summary.querySelector('[data-hotel-total]');
         var grandTotalEl = summary.querySelector('[data-grand-total]');
-        var applySnapshotBtn = snapshotBox.querySelector('[data-apply-snapshot]');
-        var saveSnapshotBtn = snapshotBox.querySelector('[data-save-snapshot]');
         var snapshotNoteEl = snapshotBox.querySelector('[data-snapshot-note]');
 
         function parseNum(v) {
@@ -1897,10 +1892,6 @@
         function refreshSnapshotNote() {
           var mk = selectedMonthKey();
           var snap = getSavedSnapshot(mk);
-          var today = new Date();
-          var firstDay = today.getDate() === 1;
-          saveSnapshotBtn.disabled = !firstDay;
-          saveSnapshotBtn.title = firstDay ? '' : 'Only enabled on the 1st day of each month';
           if (snap) {
             var time = snap.updatedAt ? new Date(snap.updatedAt).toLocaleString() : 'unknown';
             setSnapshotNote(
@@ -1976,32 +1967,6 @@
         });
         hotelInputs.forEach(function(h) {
           h.input.addEventListener('input', recalcBudget);
-        });
-
-        applySnapshotBtn.addEventListener('click', function() {
-          var snap = getSavedSnapshot(selectedMonthKey());
-          if (!snap) {
-            setSnapshotNote('No monthly snapshot found for this month yet.');
-            return;
-          }
-          applySnapshot(snap);
-          setSnapshotNote('Monthly snapshot applied.');
-        });
-
-        saveSnapshotBtn.addEventListener('click', function() {
-          var today = new Date();
-          if (today.getDate() !== 1) {
-            setSnapshotNote('Update is allowed only on the 1st day of each month.');
-            return;
-          }
-          var payload = readCurrentValues();
-          try {
-            localStorage.setItem(snapshotStorageKey(route.id || 'route', selectedMonthKey()), JSON.stringify(payload));
-            refreshSnapshotNote();
-            setSnapshotNote('Snapshot updated for this month and locked as baseline.');
-          } catch (e) {
-            setSnapshotNote('Failed to save snapshot. Please check browser storage availability.');
-          }
         });
 
         rebuildLinks();
