@@ -1903,15 +1903,24 @@
               img.alt = 'Scenery photo';
               img.loading = 'lazy';
               img.style.display = 'block';
-              img.addEventListener('error', function() {
-                var fallbackUrl = generateVisualCard(city || q);
-                img.src = fallbackUrl;
-                try { localStorage.setItem(cacheKey, fallbackUrl); } catch (e) {}
+              (function() {
+                var backupCandidates = [
+                  generateVisualCard([city, attraction].filter(Boolean).join(', ') || city || q),
+                  'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true',
+                  'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800'
+                ];
+                var idx = 0;
                 img.addEventListener('error', function() {
+                  if (idx < backupCandidates.length) {
+                    var nextUrl = backupCandidates[idx++];
+                    img.src = nextUrl;
+                    try { localStorage.setItem(cacheKey, nextUrl); } catch (e) {}
+                    return;
+                  }
                   img.src = placeholderUrl;
                   // Do NOT cache placeholder; we want real generated images when possible.
-                }, { once: true });
-              });
+                });
+              })();
               photoWrap.appendChild(img);
               photoHolder.appendChild(photoWrap);
               return;
@@ -1940,8 +1949,11 @@
             photoWrap.appendChild(placeholderOverlay);
 
             var visualLocation = [city, attraction].filter(Boolean).join(', ');
-            var fallbackUrl1 = generateVisualCard(visualLocation || city || q);
-            var fallbackUrl2 = generateVisualCard(city || q);
+            var candidates = [
+              generateVisualCard(visualLocation || city || q),
+              'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true',
+              'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800'
+            ];
             var attempted = 0;
             var loaded = false;
 
@@ -1973,15 +1985,14 @@
 
             img2.addEventListener('error', function() {
               if (loaded) return;
-              if (attempted === 0) {
-                attempted = 1;
-                img2.src = fallbackUrl2;
+              if (attempted < candidates.length) {
+                img2.src = candidates[attempted++];
                 return;
               }
-              // Let timeout show placeholder; keep it as "loading" until then.
-            }, { once: true });
+              showPlaceholder();
+            });
 
-            img2.src = fallbackUrl1;
+            img2.src = candidates[attempted++];
 
             photoWrap.appendChild(img2);
             photoHolder.appendChild(photoWrap);
