@@ -1924,6 +1924,14 @@
                 var s = String(errMsg || '');
                 return s.toLowerCase().indexOf('no photos found') !== -1;
               }
+              function isRateLimitError(errMsg) {
+                var s = String(errMsg || '');
+                return (
+                  s.toLowerCase().indexOf('rate limit') !== -1 ||
+                  s.toLowerCase().indexOf('too many requests') !== -1 ||
+                  s.indexOf('403') !== -1
+                );
+              }
               function fetchOne(queryText) {
                 // If we get rate limited, stop retrying aggressively.
                 // (Unsplash will also include error info in JSON, but we keep this simple.)
@@ -1966,11 +1974,12 @@
               var raw = normalizeQuery(keyword || '');
               var cityOnly = normalizeQuery((raw.split(' ').slice(0, 3).join(' ')) || '');
               // Keep the number of API requests low to avoid rate limits.
+              // Prefer general city/landscape queries first (more likely to exist).
               var queries = [];
-              if (raw) queries.push(raw);
-              if (cityOnly && cityOnly !== raw) queries.push(cityOnly + ' landscape');
+              if (cityOnly) queries.push(cityOnly + ' landscape');
               queries.push('travel photography');
               queries.push('cinematic road trip landscape');
+              if (raw) queries.push(raw);
 
               // Deduplicate while preserving order.
               var seen = {};
@@ -1982,10 +1991,12 @@
                 return true;
               });
 
-              // Only try up to 3 queries.
-              queries = queries.slice(0, 3);
+              // Only try up to 2 queries.
+              queries = queries.slice(0, 2);
 
-              var dedupeKey = 'unsplash_query_' + normalizeQuery(queries[0] || raw || 'travel photography').toLowerCase();
+              var dedupeKey =
+                'unsplash_query_' +
+                normalizeQuery(cityOnly || queries[0] || raw || 'travel photography').toLowerCase();
               try {
                 if (!window.__UNSPLASH_CALLS__) window.__UNSPLASH_CALLS__ = {};
                 if (window.__UNSPLASH_CALLS__[dedupeKey]) return window.__UNSPLASH_CALLS__[dedupeKey];
@@ -1999,7 +2010,8 @@
               function scheduleFetch(queryText) {
                 return new Promise(function(resolve, reject) {
                   try {
-                    window.__UNSPLASH_CHAIN__ = window.__UNSPLASH_CHAIN__
+                    var start = window.__UNSPLASH_CHAIN__ || Promise.resolve();
+                    var chainPromise = start
                       .then(function() {
                         // Small delay between requests (helps with rate limits).
                         return new Promise(function(r) { setTimeout(r, 250); });
@@ -2007,7 +2019,9 @@
                       .then(function() {
                         return fetchOne(queryText).then(toInfo);
                       });
-                    window.__UNSPLASH_CHAIN__.then(resolve).catch(reject);
+                    // Keep chain alive even if this request fails.
+                    window.__UNSPLASH_CHAIN__ = chainPromise.catch(function() { return null; });
+                    chainPromise.then(resolve).catch(reject);
                   } catch (e) {
                     fetchOne(queryText).then(toInfo).then(resolve).catch(reject);
                   }
@@ -2021,6 +2035,10 @@
                   var msg = (err && err.message) ? err.message : err;
                   if (isNoPhotosFoundError(msg) && i + 1 < queries.length) {
                     return tryQueriesAt(i + 1);
+                  }
+                  if (isRateLimitError(msg)) {
+                    // Stop further attempts when rate limited.
+                    throw err;
                   }
                   throw err;
                 });
@@ -2106,7 +2124,9 @@
 
             function revealPlaceholderOnly() {
               try {
-                if (skeleton && skeleton.parentNode) skeleton.remove();
+                // Keep skeleton visible to avoid the "totally blank" perception.
+                // (We only show placeholder overlay on top.)
+                if (skeleton && skeleton.parentNode) skeleton.style.opacity = '1';
               } catch (e) {}
               placeholderOverlay.style.display = 'block';
               img2.style.opacity = '0';
@@ -2115,7 +2135,7 @@
 
             var timeoutId = setTimeout(function() {
               revealPlaceholderOnly();
-            }, 9000);
+            }, 3200);
 
             img2.addEventListener('load', function() {
               clearTimeout(timeoutId);
@@ -2131,7 +2151,9 @@
               revealPlaceholderOnly();
             });
 
-            var visualKeyword = [city, attraction].filter(Boolean).join(' ');
+            // Use a more general keyword to increase hit-rate (city + route tag).
+            var primaryTag = (route.tags && route.tags.length) ? route.tags[0] : '';
+            var visualKeyword = [primaryTag, city].filter(Boolean).join(' ');
             getTravelHeroImage(visualKeyword || q)
               .then(function(info) {
                 renderAttribution(photoWrap, info);
