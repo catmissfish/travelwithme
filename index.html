@@ -733,6 +733,34 @@
       background: #60a5fa;
       box-shadow: 0 0 0 3px rgba(219,234,254,0.85);
     }
+    .day-photo {
+      margin-top: 8px;
+      margin-bottom: 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(226,232,240,0.9);
+      background: rgba(255,255,255,0.8);
+      box-shadow: 0 10px 26px rgba(15,23,42,0.06);
+      position: relative;
+    }
+    .day-photo img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+      aspect-ratio: 16 / 9;
+    }
+    .day-photo-skeleton {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(90deg, rgba(226,232,240,0.55), rgba(226,232,240,0.95), rgba(226,232,240,0.55));
+      background-size: 220% 100%;
+      animation: sk-shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes sk-shimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 220% 50%; }
+    }
     .day-top {
       display: flex;
       align-items: baseline;
@@ -1682,6 +1710,126 @@
 
           top.appendChild(left);
           top.appendChild(right);
+
+          // Daily scenery photo (city + first sightseeing keyword from items)
+          (function() {
+            var scenicKeywords = [
+              'bridge',
+              'park',
+              'lighthouse',
+              'museum',
+              'church',
+              'lake',
+              'beach',
+              'glacier',
+              'castle',
+              'opera',
+              'viewpoint',
+              'lookout',
+              'river',
+              'harbor',
+              'fjord',
+              'harbor',
+              'sunset',
+              'skyline',
+              'lagoon',
+              'wharf',
+              'pier',
+              'canyon',
+              'garden',
+              'alps',
+              'island'
+            ];
+
+            function isTransitLine(txt) {
+              var t = (txt || '').trim();
+              if (!t) return true;
+              var lower = t.toLowerCase();
+              if (lower.indexOf('flight') !== -1) return true;
+              if (lower.indexOf('pick up') !== -1) return true;
+              if (lower.indexOf('drive') !== -1) return true;
+              if (lower.indexOf('car') !== -1 && lower.indexOf('park') === -1) return true;
+              if (lower.indexOf('return') !== -1) return true;
+              if (lower.indexOf('ferry') !== -1) return true;
+              if (lower.indexOf('airport') !== -1) return true;
+              if (lower.indexOf('check in') !== -1) return true;
+              if (lower.indexOf('check-out') !== -1) return true;
+              if (t.indexOf('→') !== -1) return true;
+              if (lower.indexOf('dinner') !== -1) return true;
+              return false;
+            }
+
+            function extractAttraction(items) {
+              var best = '';
+              var firstNonTransit = '';
+              (items || []).forEach(function(txt) {
+                var t = (txt || '').trim();
+                if (!t) return;
+                if (firstNonTransit) return;
+                if (!isTransitLine(t)) {
+                  firstNonTransit = t;
+                }
+                var lower = t.toLowerCase();
+                for (var i = 0; i < scenicKeywords.length; i++) {
+                  if (lower.indexOf(scenicKeywords[i]) !== -1) {
+                    best = t;
+                    break;
+                  }
+                }
+              });
+              return best || firstNonTransit || '';
+            }
+
+            var attraction = extractAttraction(day.items || []);
+            var city = (day.city || '').trim();
+            var q = (city + ' ' + attraction).trim();
+            if (!q) return;
+
+            var cacheKey = 'roadtrip_dayphoto_' + (route.id || 'route') + '_' + (day.date || '');
+            var cached = '';
+            try {
+              cached = localStorage.getItem(cacheKey) || '';
+            } catch (e) {}
+
+            var photoWrap = document.createElement('div');
+            photoWrap.className = 'day-photo';
+
+            if (cached) {
+              var img = document.createElement('img');
+              img.src = cached;
+              img.alt = 'Scenery photo';
+              img.loading = 'lazy';
+              photoWrap.appendChild(img);
+              wrap.appendChild(photoWrap);
+              return;
+            }
+
+            var skeleton = document.createElement('div');
+            skeleton.className = 'day-photo-skeleton';
+            photoWrap.appendChild(skeleton);
+
+            var img2 = document.createElement('img');
+            img2.alt = 'Scenery photo';
+            img2.loading = 'lazy';
+            img2.style.display = 'none';
+            img2.src = 'https://source.unsplash.com/1200x800/?' + encodeURIComponent(q);
+
+            img2.addEventListener('load', function() {
+              try {
+                var finalUrl = img2.currentSrc || img2.src;
+                localStorage.setItem(cacheKey, finalUrl);
+              } catch (e) {}
+              skeleton.remove();
+              img2.style.display = 'block';
+            });
+
+            img2.addEventListener('error', function() {
+              skeleton.remove();
+            });
+
+            photoWrap.appendChild(img2);
+            wrap.appendChild(photoWrap);
+          })();
 
           var ul = document.createElement('ul');
           ul.className = 'day-list';
