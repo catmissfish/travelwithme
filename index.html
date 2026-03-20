@@ -742,17 +742,19 @@
       background: rgba(255,255,255,0.8);
       box-shadow: 0 10px 26px rgba(15,23,42,0.06);
       position: relative;
+      aspect-ratio: 16 / 2.3;
+      max-height: 110px;
     }
     .day-photo img {
       width: 100%;
-      height: auto;
+      height: 100%;
       display: block;
       object-fit: cover;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: auto;
     }
     .day-photo-skeleton {
       width: 100%;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: 16 / 2.3;
       background: linear-gradient(90deg, rgba(226,232,240,0.55), rgba(226,232,240,0.95), rgba(226,232,240,0.55));
       background-size: 220% 100%;
       animation: sk-shimmer 1.2s ease-in-out infinite;
@@ -1710,6 +1712,7 @@
 
           top.appendChild(left);
           top.appendChild(right);
+          wrap.appendChild(top);
 
           // Daily scenery photo (city + first sightseeing keyword from items)
           (function() {
@@ -1799,6 +1802,11 @@
               img.src = cached;
               img.alt = 'Scenery photo';
               img.loading = 'lazy';
+              img.addEventListener('error', function() {
+                var fallbackUrl = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800';
+                img.src = fallbackUrl;
+                try { localStorage.setItem(cacheKey, fallbackUrl); } catch (e) {}
+              });
               photoWrap.appendChild(img);
               wrap.appendChild(photoWrap);
               return;
@@ -1824,8 +1832,21 @@
             });
 
             img2.addEventListener('error', function() {
-              skeleton.remove();
-            });
+              // fallback (0-cost, no API key)
+              var fallbackUrl = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800';
+              img2.src = fallbackUrl;
+              img2.addEventListener('load', function() {
+                try {
+                  localStorage.setItem(cacheKey, img2.currentSrc || img2.src);
+                } catch (e) {}
+                skeleton.remove();
+                img2.style.display = 'block';
+              }, { once: true });
+              img2.addEventListener('error', function() {
+                skeleton.remove();
+                img2.style.display = 'none';
+              }, { once: true });
+            }, { once: true });
 
             photoWrap.appendChild(img2);
             wrap.appendChild(photoWrap);
@@ -1839,7 +1860,6 @@
             ul.appendChild(li);
           });
 
-          wrap.appendChild(top);
           if ((day.items || []).length) wrap.appendChild(ul);
           itineraryBody.appendChild(wrap);
         });
