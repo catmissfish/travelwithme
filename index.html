@@ -1976,10 +1976,13 @@
               // Keep the number of API requests low to avoid rate limits.
               // Prefer general city/landscape queries first (more likely to exist).
               var queries = [];
-              if (cityOnly) queries.push(cityOnly + ' landscape');
+              // Try a day-specific keyword first to reduce repeats; then fall back to general city.
+              // Also cap keyword length to avoid "No photos found" for too specific phrases.
+              var rawShort = raw.split(' ').slice(0, 7).join(' ');
+              if (rawShort) queries.push(rawShort);
+              if (cityOnly && cityOnly !== rawShort) queries.push(cityOnly + ' landscape');
               queries.push('travel photography');
-              queries.push('cinematic road trip landscape');
-              if (raw) queries.push(raw);
+              // Only try up to 2 queries below.
 
               // Deduplicate while preserving order.
               var seen = {};
@@ -1994,9 +1997,10 @@
               // Only try up to 2 queries.
               queries = queries.slice(0, 2);
 
+              // Dedupe key must be based on the actual query used (avoid same city -> same photo).
               var dedupeKey =
                 'unsplash_query_' +
-                normalizeQuery(cityOnly || queries[0] || raw || 'travel photography').toLowerCase();
+                normalizeQuery(queries[0] || rawShort || cityOnly || 'travel photography').toLowerCase();
               try {
                 if (!window.__UNSPLASH_CALLS__) window.__UNSPLASH_CALLS__ = {};
                 if (window.__UNSPLASH_CALLS__[dedupeKey]) return window.__UNSPLASH_CALLS__[dedupeKey];
@@ -2151,9 +2155,9 @@
               revealPlaceholderOnly();
             });
 
-            // Use a more general keyword to increase hit-rate (city + route tag).
+            // Use city + the extracted "attraction" keyword to reduce repeats.
             var primaryTag = (route.tags && route.tags.length) ? route.tags[0] : '';
-            var visualKeyword = [primaryTag, city].filter(Boolean).join(' ');
+            var visualKeyword = [city, attraction, primaryTag].filter(Boolean).join(' ');
             getTravelHeroImage(visualKeyword || q)
               .then(function(info) {
                 renderAttribution(photoWrap, info);
