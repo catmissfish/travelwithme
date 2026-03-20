@@ -749,6 +749,8 @@
       height: 100%;
       display: block;
       object-fit: cover;
+      transform-origin: center center;
+      animation: day-photo-breathe 18s ease-in-out infinite alternate;
     }
     .day-photo-skeleton {
       width: 100%;
@@ -789,6 +791,15 @@
     @keyframes sk-shimmer {
       0% { background-position: 0% 50%; }
       100% { background-position: 220% 50%; }
+    }
+    @keyframes day-photo-breathe {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.08); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .day-photo img {
+        animation: none;
+      }
     }
     .day-top {
       display: flex;
@@ -1857,6 +1868,18 @@
               return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
             }
 
+            function generateVisualCard(locationName) {
+              var prompt =
+                'cinematic travel photography, ' +
+                (locationName || 'beautiful destination') +
+                ', golden hour light, 8k ultra hd, minimalist composition';
+              return (
+                'https://image.pollinations.ai/prompt/' +
+                encodeURIComponent(prompt) +
+                '?width=1200&height=800&nologo=true&enhance=true'
+              );
+            }
+
             var placeholderUrl = makePlaceholderDataUrl(city || q);
 
             var cacheKey = 'roadtrip_dayphoto_' + (route.id || 'route') + '_' + (day.date || '');
@@ -1881,12 +1904,12 @@
               img.loading = 'lazy';
               img.style.display = 'block';
               img.addEventListener('error', function() {
-                var fallbackUrl = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800';
+                var fallbackUrl = generateVisualCard(city || q);
                 img.src = fallbackUrl;
                 try { localStorage.setItem(cacheKey, fallbackUrl); } catch (e) {}
                 img.addEventListener('error', function() {
                   img.src = placeholderUrl;
-                  // Do NOT cache placeholder; we want real picsum images when possible.
+                  // Do NOT cache placeholder; we want real generated images when possible.
                 }, { once: true });
               });
               photoWrap.appendChild(img);
@@ -1905,7 +1928,7 @@
             img2.style.opacity = '0';
             img2.style.transition = 'opacity 220ms ease';
 
-            // Overlay placeholder: show after timeout, but keep picsum request alive.
+            // Overlay placeholder: show after timeout, but keep generation request alive.
             var placeholderOverlay = document.createElement('div');
             placeholderOverlay.style.position = 'absolute';
             placeholderOverlay.style.inset = '0';
@@ -1916,8 +1939,9 @@
             placeholderOverlay.style.zIndex = '2';
             photoWrap.appendChild(placeholderOverlay);
 
-            var fallbackUrl1 = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/400';
-            var fallbackUrl2 = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800';
+            var visualLocation = [city, attraction].filter(Boolean).join(', ');
+            var fallbackUrl1 = generateVisualCard(visualLocation || city || q);
+            var fallbackUrl2 = generateVisualCard(city || q);
             var attempted = 0;
             var loaded = false;
 
