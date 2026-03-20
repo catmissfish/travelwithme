@@ -1888,8 +1888,11 @@
               cached = localStorage.getItem(cacheKey) || '';
             } catch (e) {}
 
-            // If previous runs cached a placeholder (data URL), ignore it and re-fetch.
-            if (cached && cached.indexOf('data:image/svg+xml') === 0) {
+            // Trust only pollinations cache; drop old picsum/data-url cache and regenerate.
+            var isPollinationsCache =
+              cached.indexOf('image.pollinations.ai') !== -1 ||
+              cached.indexOf('pollinations.ai') !== -1;
+            if (cached && (!isPollinationsCache || cached.indexOf('data:image/svg+xml') === 0)) {
               try { localStorage.removeItem(cacheKey); } catch (e) {}
               cached = '';
             }
