@@ -1882,7 +1882,7 @@
 
             var placeholderUrl = makePlaceholderDataUrl(city || q);
 
-            var cacheKey = 'roadtrip_dayphoto_' + (route.id || 'route') + '_' + (day.date || '');
+            var cacheKey = 'roadtrip_dayphoto_v2_' + (route.id || 'route') + '_' + (day.date || '');
             var cached = '';
             try {
               cached = localStorage.getItem(cacheKey) || '';
@@ -1909,8 +1909,7 @@
               (function() {
                 var backupCandidates = [
                   generateVisualCard([city, attraction].filter(Boolean).join(', ') || city || q),
-                  'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true',
-                  'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800'
+                  'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true'
                 ];
                 var idx = 0;
                 img.addEventListener('error', function() {
@@ -1954,8 +1953,7 @@
             var visualLocation = [city, attraction].filter(Boolean).join(', ');
             var candidates = [
               generateVisualCard(visualLocation || city || q),
-              'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true',
-              'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800'
+              'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true'
             ];
             var attempted = 0;
             var loaded = false;
