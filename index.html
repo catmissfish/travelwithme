@@ -759,6 +759,27 @@
       background-size: 220% 100%;
       animation: sk-shimmer 1.2s ease-in-out infinite;
     }
+    .day-photo-credit {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      z-index: 4;
+      font-size: 0.62rem;
+      line-height: 1.35;
+      color: rgba(255,255,255,0.96);
+      background: rgba(15,23,42,0.45);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 8px;
+      padding: 3px 6px;
+      backdrop-filter: blur(4px);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      pointer-events: auto;
+    }
+    .day-photo-credit a {
+      color: rgba(255,255,255,0.98);
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(255,255,255,0.55);
+    }
     .day-content-row {
       display: flex;
       gap: 14px;
@@ -1868,61 +1889,94 @@
               return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
             }
 
-            function generateVisualCard(locationName) {
-              var prompt =
-                'cinematic travel photography, ' +
-                (locationName || 'beautiful destination') +
-                ', golden hour light, 8k ultra hd, minimalist composition';
-              return (
-                'https://image.pollinations.ai/prompt/' +
-                encodeURIComponent(prompt) +
-                '?width=1200&height=800&nologo=true&enhance=true'
-              );
+            function getUnsplashAccessKey() {
+              var DEFAULT_UNSPLASH_ACCESS_KEY = 'OhWLAECcWlU9gKorASgg9oh53asfvYVnVX-SvPi98J4';
+              try {
+                if (window.__UNSPLASH_ACCESS_KEY__) return window.__UNSPLASH_ACCESS_KEY__;
+              } catch (e) {}
+              try {
+                var k = localStorage.getItem('UNSPLASH_ACCESS_KEY') || '';
+                if (k) return k;
+              } catch (e) {}
+              return DEFAULT_UNSPLASH_ACCESS_KEY;
+            }
+
+            function getTravelHeroImage(keyword) {
+              var accessKey = getUnsplashAccessKey();
+              if (!accessKey) {
+                return Promise.reject(new Error('Missing Unsplash access key'));
+              }
+              var apiUrl =
+                'https://api.unsplash.com/photos/random' +
+                '?query=' + encodeURIComponent(keyword || 'travel landscape') +
+                '&orientation=landscape';
+              return fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                  'Authorization': 'Client-ID ' + accessKey,
+                  'Accept-Version': 'v1'
+                }
+              })
+                .then(function(resp) {
+                  if (!resp.ok) throw new Error('Unsplash API failed: ' + resp.status);
+                  return resp.json();
+                })
+                .then(function(data) {
+                  var imgUrl = data && data.urls ? data.urls.regular : '';
+                  if (!imgUrl) throw new Error('Unsplash image url missing');
+                  var userName = (data.user && data.user.name) ? data.user.name : 'Unknown';
+                  var userLink = (data.user && data.user.links && data.user.links.html)
+                    ? (data.user.links.html + '?utm_source=roadtrip_routes&utm_medium=referral')
+                    : 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
+                  var unsplashLink = 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
+                  return {
+                    url: imgUrl,
+                    authorName: userName,
+                    authorLink: userLink,
+                    unsplashLink: unsplashLink
+                  };
+                });
+            }
+
+            function renderAttribution(photoWrap, info) {
+              var old = photoWrap.querySelector('.day-photo-credit');
+              if (old) old.remove();
+              if (!info || !info.authorName) return;
+              var credit = document.createElement('div');
+              credit.className = 'day-photo-credit';
+              var authorHref = info.authorLink || 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
+              var unsplashHref = info.unsplashLink || 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
+              credit.innerHTML =
+                'Photo by ' +
+                '<a href="' + authorHref + '" target="_blank" rel="noopener noreferrer">' + escapeXml(info.authorName) + '</a>' +
+                ' on ' +
+                '<a href="' + unsplashHref + '" target="_blank" rel="noopener noreferrer">Unsplash</a>';
+              photoWrap.appendChild(credit);
             }
 
             var placeholderUrl = makePlaceholderDataUrl(city || q);
 
-            var cacheKey = 'roadtrip_dayphoto_v2_' + (route.id || 'route') + '_' + (day.date || '');
-            var cached = '';
+            var cacheKey = 'roadtrip_dayphoto_v3_' + (route.id || 'route') + '_' + (day.date || '');
+            var cached = null;
             try {
-              cached = localStorage.getItem(cacheKey) || '';
+              var raw = localStorage.getItem(cacheKey) || '';
+              cached = raw ? JSON.parse(raw) : null;
             } catch (e) {}
-
-            // Trust only pollinations cache; drop old picsum/data-url cache and regenerate.
-            var isPollinationsCache =
-              cached.indexOf('image.pollinations.ai') !== -1 ||
-              cached.indexOf('pollinations.ai') !== -1;
-            if (cached && (!isPollinationsCache || cached.indexOf('data:image/svg+xml') === 0)) {
-              try { localStorage.removeItem(cacheKey); } catch (e) {}
-              cached = '';
-            }
 
             var photoWrap = document.createElement('div');
             photoWrap.className = 'day-photo';
 
-            if (cached) {
+            if (cached && cached.url) {
               var img = document.createElement('img');
-              img.src = cached;
+              img.src = cached.url;
               img.alt = 'Scenery photo';
               img.loading = 'lazy';
               img.style.display = 'block';
-              (function() {
-                var backupCandidates = [
-                  generateVisualCard([city, attraction].filter(Boolean).join(', ') || city || q),
-                  'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true'
-                ];
-                var idx = 0;
-                img.addEventListener('error', function() {
-                  if (idx < backupCandidates.length) {
-                    var nextUrl = backupCandidates[idx++];
-                    img.src = nextUrl;
-                    try { localStorage.setItem(cacheKey, nextUrl); } catch (e) {}
-                    return;
-                  }
-                  img.src = placeholderUrl;
-                  // Do NOT cache placeholder; we want real generated images when possible.
-                });
-              })();
+              img.addEventListener('error', function() {
+                img.src = placeholderUrl;
+                renderAttribution(photoWrap, null);
+              });
+              renderAttribution(photoWrap, cached);
               photoWrap.appendChild(img);
               photoHolder.appendChild(photoWrap);
               return;
@@ -1939,7 +1993,7 @@
             img2.style.opacity = '0';
             img2.style.transition = 'opacity 220ms ease';
 
-            // Overlay placeholder: show after timeout, but keep generation request alive.
+            // Overlay placeholder while waiting for API/image load.
             var placeholderOverlay = document.createElement('div');
             placeholderOverlay.style.position = 'absolute';
             placeholderOverlay.style.inset = '0';
@@ -1950,50 +2004,45 @@
             placeholderOverlay.style.zIndex = '2';
             photoWrap.appendChild(placeholderOverlay);
 
-            var visualLocation = [city, attraction].filter(Boolean).join(', ');
-            var candidates = [
-              generateVisualCard(visualLocation || city || q),
-              'https://image.pollinations.ai/prompt/' + encodeURIComponent('cinematic travel photography, ' + (city || q) + ', golden hour light, 8k ultra hd, minimalist composition') + '?width=1200&height=800&nologo=true'
-            ];
-            var attempted = 0;
-            var loaded = false;
-
-            function showPlaceholder() {
-              if (loaded) return;
+            function revealPlaceholderOnly() {
               try {
                 if (skeleton && skeleton.parentNode) skeleton.remove();
               } catch (e) {}
               placeholderOverlay.style.display = 'block';
+              img2.style.opacity = '0';
+              renderAttribution(photoWrap, null);
             }
 
             var timeoutId = setTimeout(function() {
-              showPlaceholder();
-            }, 8500);
+              revealPlaceholderOnly();
+            }, 9000);
 
             img2.addEventListener('load', function() {
-              loaded = true;
               clearTimeout(timeoutId);
               try {
                 if (skeleton && skeleton.parentNode) skeleton.remove();
               } catch (e) {}
               placeholderOverlay.style.display = 'none';
               img2.style.opacity = '1';
-              try {
-                var finalUrl = img2.currentSrc || img2.src;
-                localStorage.setItem(cacheKey, finalUrl);
-              } catch (e) {}
             });
 
             img2.addEventListener('error', function() {
-              if (loaded) return;
-              if (attempted < candidates.length) {
-                img2.src = candidates[attempted++];
-                return;
-              }
-              showPlaceholder();
+              clearTimeout(timeoutId);
+              revealPlaceholderOnly();
             });
 
-            img2.src = candidates[attempted++];
+            var visualKeyword = [city, attraction].filter(Boolean).join(' ');
+            getTravelHeroImage(visualKeyword || q)
+              .then(function(info) {
+                renderAttribution(photoWrap, info);
+                img2.src = info.url;
+                try {
+                  localStorage.setItem(cacheKey, JSON.stringify(info));
+                } catch (e) {}
+              })
+              .catch(function() {
+                revealPlaceholderOnly();
+              });
 
             photoWrap.appendChild(img2);
             photoHolder.appendChild(photoWrap);
