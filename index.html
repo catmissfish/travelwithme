@@ -737,7 +737,7 @@
       border-radius: 12px;
       overflow: hidden;
       border: 1px solid rgba(226,232,240,0.9);
-      background: rgba(255,255,255,0.8);
+      background: linear-gradient(135deg, rgba(219,234,254,0.92), rgba(239,246,255,0.9));
       box-shadow: 0 10px 26px rgba(15,23,42,0.06);
       position: relative;
       width: 228px;
@@ -1914,36 +1914,65 @@
               if (!accessKey) {
                 return Promise.reject(new Error('Missing Unsplash access key'));
               }
-              var apiUrl =
-                'https://api.unsplash.com/photos/random' +
-                '?query=' + encodeURIComponent(keyword || 'travel landscape') +
-                '&orientation=landscape';
-              return fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                  'Authorization': 'Client-ID ' + accessKey,
-                  'Accept-Version': 'v1'
-                }
-              })
-                .then(function(resp) {
-                  if (!resp.ok) throw new Error('Unsplash API failed: ' + resp.status);
-                  return resp.json();
-                })
-                .then(function(data) {
-                  var imgUrl = data && data.urls ? data.urls.regular : '';
-                  if (!imgUrl) throw new Error('Unsplash image url missing');
-                  var userName = (data.user && data.user.name) ? data.user.name : 'Unknown';
-                  var userLink = (data.user && data.user.links && data.user.links.html)
-                    ? (data.user.links.html + '?utm_source=roadtrip_routes&utm_medium=referral')
-                    : 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
-                  var unsplashLink = 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
-                  return {
-                    url: imgUrl,
-                    authorName: userName,
-                    authorLink: userLink,
-                    unsplashLink: unsplashLink
-                  };
+              function normalizeQuery(q) {
+                return String(q || '')
+                  .replace(/[(),/]/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+              }
+              function fetchOne(queryText) {
+                var apiUrl =
+                  'https://api.unsplash.com/photos/random' +
+                  '?query=' + encodeURIComponent(queryText) +
+                  '&orientation=landscape';
+                return fetch(apiUrl, {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': 'Client-ID ' + accessKey,
+                    'Accept-Version': 'v1'
+                  }
+                }).then(function(resp) {
+                  return resp.json().then(function(body) {
+                    if (!resp.ok) {
+                      var msg = (body && body.errors && body.errors.join(', ')) || ('Unsplash API failed: ' + resp.status);
+                      throw new Error(msg);
+                    }
+                    return body;
+                  });
                 });
+              }
+              function toInfo(data) {
+                var imgUrl = data && data.urls ? data.urls.regular : '';
+                if (!imgUrl) throw new Error('Unsplash image url missing');
+                var userName = (data.user && data.user.name) ? data.user.name : 'Unknown';
+                var userLink = (data.user && data.user.links && data.user.links.html)
+                  ? (data.user.links.html + '?utm_source=roadtrip_routes&utm_medium=referral')
+                  : 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
+                var unsplashLink = 'https://unsplash.com/?utm_source=roadtrip_routes&utm_medium=referral';
+                return {
+                  url: imgUrl,
+                  authorName: userName,
+                  authorLink: userLink,
+                  unsplashLink: unsplashLink
+                };
+              }
+
+              var raw = normalizeQuery(keyword || '');
+              var cityOnly = normalizeQuery((raw.split(' ').slice(0, 3).join(' ')) || '');
+              var queries = [
+                raw + ' travel photography',
+                cityOnly + ' cityscape travel',
+                cityOnly + ' landscape',
+                'cinematic road trip landscape'
+              ].map(normalizeQuery).filter(Boolean);
+
+              var chain = Promise.reject(new Error('init'));
+              queries.forEach(function(q) {
+                chain = chain.catch(function() {
+                  return fetchOne(q).then(toInfo);
+                });
+              });
+              return chain;
             }
 
             function renderAttribution(photoWrap, info) {
