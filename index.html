@@ -734,30 +734,56 @@
       box-shadow: 0 0 0 3px rgba(219,234,254,0.85);
     }
     .day-photo {
-      margin-top: 8px;
-      margin-bottom: 10px;
       border-radius: 12px;
       overflow: hidden;
       border: 1px solid rgba(226,232,240,0.9);
       background: rgba(255,255,255,0.8);
       box-shadow: 0 10px 26px rgba(15,23,42,0.06);
       position: relative;
-      aspect-ratio: 16 / 2.3;
-      max-height: 110px;
+      width: 190px;
+      flex: 0 0 190px;
     }
     .day-photo img {
       width: 100%;
       height: 100%;
       display: block;
       object-fit: cover;
-      aspect-ratio: auto;
     }
     .day-photo-skeleton {
       width: 100%;
-      aspect-ratio: 16 / 2.3;
+      aspect-ratio: 16 / 9;
       background: linear-gradient(90deg, rgba(226,232,240,0.55), rgba(226,232,240,0.95), rgba(226,232,240,0.55));
       background-size: 220% 100%;
       animation: sk-shimmer 1.2s ease-in-out infinite;
+    }
+    .day-content-row {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-top: 10px;
+    }
+    .day-content-left {
+      flex: 1;
+      min-width: 0;
+    }
+    .day-content-right {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+    }
+    .day-photo-holder {
+      width: 190px;
+    }
+    @media (max-width: 680px) {
+      .day-content-row {
+        flex-direction: column;
+      }
+      .day-photo-holder,
+      .day-photo {
+        width: 100%;
+        flex: 0 0 auto;
+      }
     }
     @keyframes sk-shimmer {
       0% { background-position: 0% 50%; }
@@ -1714,6 +1740,20 @@
           top.appendChild(right);
           wrap.appendChild(top);
 
+          // Layout: left itinerary list, right small scenery image
+          var contentRow = document.createElement('div');
+          contentRow.className = 'day-content-row';
+          var leftCol = document.createElement('div');
+          leftCol.className = 'day-content-left';
+          var rightCol = document.createElement('div');
+          rightCol.className = 'day-content-right';
+          var photoHolder = document.createElement('div');
+          photoHolder.className = 'day-photo-holder';
+          rightCol.appendChild(photoHolder);
+          contentRow.appendChild(leftCol);
+          contentRow.appendChild(rightCol);
+          wrap.appendChild(contentRow);
+
           // Daily scenery photo (city + first sightseeing keyword from items)
           (function() {
             var scenicKeywords = [
@@ -1808,7 +1848,7 @@
                 try { localStorage.setItem(cacheKey, fallbackUrl); } catch (e) {}
               });
               photoWrap.appendChild(img);
-              wrap.appendChild(photoWrap);
+              photoHolder.appendChild(photoWrap);
               return;
             }
 
@@ -1820,7 +1860,10 @@
             img2.alt = 'Scenery photo';
             img2.loading = 'lazy';
             img2.style.display = 'none';
-            img2.src = 'https://source.unsplash.com/1200x800/?' + encodeURIComponent(q);
+
+            // Use picsum (no API key, stable) to avoid being stuck in loading state.
+            var fallbackUrl = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/400';
+            img2.src = fallbackUrl;
 
             img2.addEventListener('load', function() {
               try {
@@ -1832,24 +1875,13 @@
             });
 
             img2.addEventListener('error', function() {
-              // fallback (0-cost, no API key)
-              var fallbackUrl = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800';
-              img2.src = fallbackUrl;
-              img2.addEventListener('load', function() {
-                try {
-                  localStorage.setItem(cacheKey, img2.currentSrc || img2.src);
-                } catch (e) {}
-                skeleton.remove();
-                img2.style.display = 'block';
-              }, { once: true });
-              img2.addEventListener('error', function() {
-                skeleton.remove();
-                img2.style.display = 'none';
-              }, { once: true });
+              // If all else fails, remove skeleton to prevent "loading forever"
+              skeleton.remove();
+              img2.style.display = 'none';
             }, { once: true });
 
             photoWrap.appendChild(img2);
-            wrap.appendChild(photoWrap);
+            photoHolder.appendChild(photoWrap);
           })();
 
           var ul = document.createElement('ul');
@@ -1860,7 +1892,7 @@
             ul.appendChild(li);
           });
 
-          if ((day.items || []).length) wrap.appendChild(ul);
+          if ((day.items || []).length) leftCol.appendChild(ul);
           itineraryBody.appendChild(wrap);
         });
 
