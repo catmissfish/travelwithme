@@ -742,6 +742,7 @@
       position: relative;
       width: 190px;
       flex: 0 0 190px;
+      aspect-ratio: 16 / 9; /* Ensure img height:100% has a real height */
     }
     .day-photo img {
       width: 100%;
@@ -1828,11 +1829,47 @@
             var q = (city + ' ' + attraction).trim();
             if (!q) return;
 
+            function escapeXml(str) {
+              return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+
+            function makePlaceholderDataUrl(text) {
+              var safe = escapeXml((text || q || 'Scenery').trim()).slice(0, 28);
+              var svg =
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">' +
+                '<defs>' +
+                '<linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+                '<stop offset="0" stop-color="#bfdbfe"/>' +
+                '<stop offset="1" stop-color="#dbeafe"/>' +
+                '</linearGradient>' +
+                '</defs>' +
+                '<rect width="1200" height="800" fill="url(#g)"/>' +
+                '<path d="M0 560 C 240 460 340 620 560 540 C 780 460 900 520 1200 430 L1200 800 L0 800 Z" fill="rgba(37,99,235,0.10)"/>' +
+                '<circle cx="980" cy="170" r="120" fill="rgba(37,99,235,0.12)"/>' +
+                '<text x="60" y="120" font-size="42" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" fill="#1e3a8a" font-weight="700">Scenery</text>' +
+                '<text x="60" y="190" font-size="28" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" fill="#1e40af">' + safe + '</text>' +
+                '</svg>';
+              return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+            }
+
+            var placeholderUrl = makePlaceholderDataUrl(city || q);
+
             var cacheKey = 'roadtrip_dayphoto_' + (route.id || 'route') + '_' + (day.date || '');
             var cached = '';
             try {
               cached = localStorage.getItem(cacheKey) || '';
             } catch (e) {}
+
+            // If previous runs cached a placeholder (data URL), ignore it and re-fetch.
+            if (cached && cached.indexOf('data:image/svg+xml') === 0) {
+              try { localStorage.removeItem(cacheKey); } catch (e) {}
+              cached = '';
+            }
 
             var photoWrap = document.createElement('div');
             photoWrap.className = 'day-photo';
@@ -1842,10 +1879,15 @@
               img.src = cached;
               img.alt = 'Scenery photo';
               img.loading = 'lazy';
+              img.style.display = 'block';
               img.addEventListener('error', function() {
                 var fallbackUrl = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800';
                 img.src = fallbackUrl;
                 try { localStorage.setItem(cacheKey, fallbackUrl); } catch (e) {}
+                img.addEventListener('error', function() {
+                  img.src = placeholderUrl;
+                  // Do NOT cache placeholder; we want real picsum images when possible.
+                }, { once: true });
               });
               photoWrap.appendChild(img);
               photoHolder.appendChild(photoWrap);
@@ -1859,26 +1901,63 @@
             var img2 = document.createElement('img');
             img2.alt = 'Scenery photo';
             img2.loading = 'lazy';
-            img2.style.display = 'none';
+            img2.style.display = 'block';
+            img2.style.opacity = '0';
+            img2.style.transition = 'opacity 220ms ease';
 
-            // Use picsum (no API key, stable) to avoid being stuck in loading state.
-            var fallbackUrl = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/400';
-            img2.src = fallbackUrl;
+            // Overlay placeholder: show after timeout, but keep picsum request alive.
+            var placeholderOverlay = document.createElement('div');
+            placeholderOverlay.style.position = 'absolute';
+            placeholderOverlay.style.inset = '0';
+            placeholderOverlay.style.backgroundImage = 'url(' + placeholderUrl + ')';
+            placeholderOverlay.style.backgroundSize = 'cover';
+            placeholderOverlay.style.backgroundPosition = 'center';
+            placeholderOverlay.style.display = 'none';
+            placeholderOverlay.style.zIndex = '2';
+            photoWrap.appendChild(placeholderOverlay);
+
+            var fallbackUrl1 = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/400';
+            var fallbackUrl2 = 'https://picsum.photos/seed/' + encodeURIComponent(q) + '/1200/800';
+            var attempted = 0;
+            var loaded = false;
+
+            function showPlaceholder() {
+              if (loaded) return;
+              try {
+                if (skeleton && skeleton.parentNode) skeleton.remove();
+              } catch (e) {}
+              placeholderOverlay.style.display = 'block';
+            }
+
+            var timeoutId = setTimeout(function() {
+              showPlaceholder();
+            }, 8500);
 
             img2.addEventListener('load', function() {
+              loaded = true;
+              clearTimeout(timeoutId);
+              try {
+                if (skeleton && skeleton.parentNode) skeleton.remove();
+              } catch (e) {}
+              placeholderOverlay.style.display = 'none';
+              img2.style.opacity = '1';
               try {
                 var finalUrl = img2.currentSrc || img2.src;
                 localStorage.setItem(cacheKey, finalUrl);
               } catch (e) {}
-              skeleton.remove();
-              img2.style.display = 'block';
             });
 
             img2.addEventListener('error', function() {
-              // If all else fails, remove skeleton to prevent "loading forever"
-              skeleton.remove();
-              img2.style.display = 'none';
+              if (loaded) return;
+              if (attempted === 0) {
+                attempted = 1;
+                img2.src = fallbackUrl2;
+                return;
+              }
+              // Let timeout show placeholder; keep it as "loading" until then.
             }, { once: true });
+
+            img2.src = fallbackUrl1;
 
             photoWrap.appendChild(img2);
             photoHolder.appendChild(photoWrap);
@@ -2237,34 +2316,7 @@
 
         function rebuildLinks() {
           links.innerHTML = '';
-          var origin = (originInput.value || '').trim();
-          var depDate = departDateInput.value || '';
-          var starts = getStopsForRoute(route);
-          var tripStart = starts.length ? starts[0] : (route.from || '');
-          var tripEnd = starts.length ? starts[starts.length - 1] : (route.to || '');
-          if (origin && tripStart && depDate) {
-            var outDate = depDate;
-            var inDate = addDays(depDate, Number(route.days || 0));
-            var gfOut = document.createElement('a');
-            gfOut.className = 'budget-link';
-            gfOut.target = '_blank';
-            gfOut.rel = 'noopener noreferrer';
-            gfOut.textContent = 'Search outbound flight (Google Flights)';
-            gfOut.href =
-              'https://www.google.com/travel/flights?hl=en#flt=' +
-              encodeURIComponent(origin) + '.' + encodeURIComponent(tripStart) + '.' + outDate;
-            links.appendChild(gfOut);
-
-            var gfIn = document.createElement('a');
-            gfIn.className = 'budget-link';
-            gfIn.target = '_blank';
-            gfIn.rel = 'noopener noreferrer';
-            gfIn.textContent = 'Search return flight (Google Flights)';
-            gfIn.href =
-              'https://www.google.com/travel/flights?hl=en#flt=' +
-              encodeURIComponent(tripEnd) + '.' + encodeURIComponent(origin) + '.' + inDate;
-            links.appendChild(gfIn);
-          }
+          // Google Flights quick search links are intentionally disabled.
         }
 
         function recalcBudget() {
