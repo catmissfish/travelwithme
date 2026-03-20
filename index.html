@@ -1920,7 +1920,13 @@
                   .replace(/\s+/g, ' ')
                   .trim();
               }
+              function isNoPhotosFoundError(errMsg) {
+                var s = String(errMsg || '');
+                return s.toLowerCase().indexOf('no photos found') !== -1;
+              }
               function fetchOne(queryText) {
+                // If we get rate limited, stop retrying aggressively.
+                // (Unsplash will also include error info in JSON, but we keep this simple.)
                 var apiUrl =
                   'https://api.unsplash.com/photos/random' +
                   '?query=' + encodeURIComponent(queryText) +
@@ -1959,20 +1965,77 @@
 
               var raw = normalizeQuery(keyword || '');
               var cityOnly = normalizeQuery((raw.split(' ').slice(0, 3).join(' ')) || '');
-              var queries = [
-                raw + ' travel photography',
-                cityOnly + ' cityscape travel',
-                cityOnly + ' landscape',
-                'cinematic road trip landscape'
-              ].map(normalizeQuery).filter(Boolean);
+              // Keep the number of API requests low to avoid rate limits.
+              var queries = [];
+              if (raw) queries.push(raw);
+              if (cityOnly && cityOnly !== raw) queries.push(cityOnly + ' landscape');
+              queries.push('travel photography');
+              queries.push('cinematic road trip landscape');
 
-              var chain = Promise.reject(new Error('init'));
-              queries.forEach(function(q) {
-                chain = chain.catch(function() {
-                  return fetchOne(q).then(toInfo);
-                });
+              // Deduplicate while preserving order.
+              var seen = {};
+              queries = queries.filter(function(q) {
+                var k = normalizeQuery(q).toLowerCase();
+                if (!k) return false;
+                if (seen[k]) return false;
+                seen[k] = true;
+                return true;
               });
-              return chain;
+
+              // Only try up to 3 queries.
+              queries = queries.slice(0, 3);
+
+              var dedupeKey = 'unsplash_query_' + normalizeQuery(queries[0] || raw || 'travel photography').toLowerCase();
+              try {
+                if (!window.__UNSPLASH_CALLS__) window.__UNSPLASH_CALLS__ = {};
+                if (window.__UNSPLASH_CALLS__[dedupeKey]) return window.__UNSPLASH_CALLS__[dedupeKey];
+              } catch (e) {}
+
+              // Global serialization to reduce burst rate-limit.
+              try {
+                if (!window.__UNSPLASH_CHAIN__) window.__UNSPLASH_CHAIN__ = Promise.resolve();
+              } catch (e) {}
+
+              function scheduleFetch(queryText) {
+                return new Promise(function(resolve, reject) {
+                  try {
+                    window.__UNSPLASH_CHAIN__ = window.__UNSPLASH_CHAIN__
+                      .then(function() {
+                        // Small delay between requests (helps with rate limits).
+                        return new Promise(function(r) { setTimeout(r, 250); });
+                      })
+                      .then(function() {
+                        return fetchOne(queryText).then(toInfo);
+                      });
+                    window.__UNSPLASH_CHAIN__.then(resolve).catch(reject);
+                  } catch (e) {
+                    fetchOne(queryText).then(toInfo).then(resolve).catch(reject);
+                  }
+                });
+              }
+
+              function tryQueriesAt(i) {
+                if (i >= queries.length) return Promise.reject(new Error('No suitable Unsplash photo found'));
+                var q = queries[i];
+                return scheduleFetch(q).catch(function(err) {
+                  var msg = (err && err.message) ? err.message : err;
+                  if (isNoPhotosFoundError(msg) && i + 1 < queries.length) {
+                    return tryQueriesAt(i + 1);
+                  }
+                  throw err;
+                });
+              }
+
+              var p = tryQueriesAt(0);
+              try {
+                if (!window.__UNSPLASH_CALLS__) window.__UNSPLASH_CALLS__ = {};
+                window.__UNSPLASH_CALLS__[dedupeKey] = p;
+                // Clear in-memory dedupe after completion so future cards can try again.
+                p.finally(function() {
+                  try { delete window.__UNSPLASH_CALLS__[dedupeKey]; } catch (e) {}
+                });
+              } catch (e) {}
+              return p;
             }
 
             function renderAttribution(photoWrap, info) {
