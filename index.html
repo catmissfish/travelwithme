@@ -864,6 +864,95 @@
       line-height: 1.75;
       font-size: 0.84rem;
     }
+    .ai-preview-section {
+      margin-top: 22px;
+      padding: 16px 18px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(209,213,219,0.95);
+      background: rgba(255,255,255,0.92);
+      box-shadow: 0 8px 22px rgba(15,23,42,0.06);
+    }
+    .ai-preview-section h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .ai-preview-section p {
+      margin: 0 0 12px;
+      font-size: 0.8rem;
+      color: rgba(71,85,105,0.95);
+      line-height: 1.55;
+    }
+    .ai-preview-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(59,130,246,0.45);
+      background: linear-gradient(180deg, rgba(239,246,255,0.98), rgba(219,234,254,0.75));
+      color: rgba(30,64,175,0.98);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.12);
+    }
+    .ai-preview-btn:hover {
+      border-color: rgba(37,99,235,0.65);
+      box-shadow: 0 6px 18px rgba(37,99,235,0.18);
+    }
+    .ai-preview-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .ai-preview-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15,23,42,0.55);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+    }
+    .ai-preview-box {
+      max-width: 960px;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #0f172a;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+      position: relative;
+    }
+    .ai-preview-box video,
+    .ai-preview-box canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .ai-preview-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      background: rgba(255,255,255,0.92);
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .ai-preview-note {
+      padding: 10px 14px;
+      font-size: 0.72rem;
+      color: rgba(226,232,240,0.9);
+      background: rgba(15,23,42,0.95);
+      border-top: 1px solid rgba(51,65,85,0.6);
+    }
   </style>
 </head>
 <body>
@@ -1709,11 +1798,227 @@
         return url;
       }
 
+      function dayPhotoStorageKey(routeId, dateStr) {
+        return 'roadtrip_dayphoto_v4_' + (routeId || 'route') + '_' + (dateStr || '');
+      }
+
+      function readDayPhotoCache(routeId, dateStr) {
+        var key = dayPhotoStorageKey(routeId, dateStr);
+        try {
+          var ss = sessionStorage.getItem('ss_' + key);
+          if (ss) {
+            var o = JSON.parse(ss);
+            if (o && o.url && String(o.url).indexOf('http') === 0) return o;
+          }
+        } catch (e) {}
+        try {
+          var raw = localStorage.getItem(key);
+          if (!raw) {
+            var oldKey = 'roadtrip_dayphoto_v3_' + (routeId || 'route') + '_' + (dateStr || '');
+            raw = localStorage.getItem(oldKey);
+            if (raw) {
+              try {
+                localStorage.setItem(key, raw);
+                localStorage.removeItem(oldKey);
+              } catch (e2) {}
+            }
+          }
+          if (!raw) return null;
+          var parsed = JSON.parse(raw);
+          if (parsed && parsed.url && String(parsed.url).indexOf('http') === 0) {
+            try {
+              sessionStorage.setItem('ss_' + key, raw);
+            } catch (e3) {}
+            return parsed;
+          }
+        } catch (e) {}
+        return null;
+      }
+
+      function writeDayPhotoCache(routeId, dateStr, info) {
+        if (!info || !info.url || String(info.url).indexOf('http') !== 0) return;
+        var key = dayPhotoStorageKey(routeId, dateStr);
+        var payload = JSON.stringify({
+          url: info.url,
+          authorName: info.authorName,
+          authorLink: info.authorLink,
+          unsplashLink: info.unsplashLink,
+          cachedAt: new Date().toISOString(),
+          fixed: true
+        });
+        try {
+          localStorage.setItem(key, payload);
+        } catch (e) {}
+        try {
+          sessionStorage.setItem('ss_' + key, payload);
+        } catch (e2) {}
+      }
+
+      function openAiRoadTripPreview(imageUrls) {
+        var urls = (imageUrls || []).filter(function(u) {
+          return u && String(u).indexOf('http') === 0;
+        });
+        if (!urls.length) {
+          alert('No scenery photos loaded yet. Scroll through the days and wait for images, then try again.');
+          return;
+        }
+        var overlay = document.createElement('div');
+        overlay.className = 'ai-preview-overlay';
+        overlay.setAttribute('role', 'dialog');
+        var box = document.createElement('div');
+        box.className = 'ai-preview-box';
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'ai-preview-close';
+        closeBtn.textContent = 'Close';
+        var note = document.createElement('div');
+        note.className = 'ai-preview-note';
+        note.textContent = 'Generating preview from your daily photos…';
+
+        var canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        var ctx = canvas.getContext('2d');
+        box.appendChild(closeBtn);
+        box.appendChild(canvas);
+        box.appendChild(note);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        document.body.style.overflow = 'hidden';
+
+        function cleanup() {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          document.body.style.overflow = 'hidden';
+        }
+        closeBtn.addEventListener('click', cleanup);
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) cleanup();
+        });
+
+        var images = [];
+        var done = 0;
+        urls.forEach(function(u) {
+          var im = new Image();
+          im.crossOrigin = 'anonymous';
+          im.onload = function() {
+            done++;
+          };
+          im.onerror = function() {
+            done++;
+          };
+          im.src = u;
+          images.push(im);
+        });
+
+        function waitLoad(cb) {
+          if (done >= urls.length && images.every(function(im) {
+            return im.complete;
+          })) return cb();
+          setTimeout(function() {
+            waitLoad(cb);
+          }, 50);
+        }
+
+        waitLoad(function() {
+          var valid = images.filter(function(im) {
+            return im.naturalWidth > 0;
+          });
+          if (!valid.length) {
+            note.textContent = 'Images could not be loaded for preview (network or CORS).';
+            return;
+          }
+          var DURATION = Math.min(15000, Math.max(6000, valid.length * 2200));
+          var seg = DURATION / valid.length;
+          var start = performance.now();
+          var rec = null;
+          var chunks = [];
+          var stream = canvas.captureStream(30);
+          try {
+            if (window.MediaRecorder) {
+              if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                rec = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+              } else if (MediaRecorder.isTypeSupported('video/webm')) {
+                rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+              }
+            }
+          } catch (e) {}
+
+          if (rec) {
+            rec.ondataavailable = function(e) {
+              if (e.data && e.data.size) chunks.push(e.data);
+            };
+            rec.onstop = function() {
+              try {
+                var blob = new Blob(chunks, { type: 'video/webm' });
+                var blobUrl = URL.createObjectURL(blob);
+                var vid = document.createElement('video');
+                vid.controls = true;
+                vid.playsInline = true;
+                vid.autoplay = true;
+                vid.loop = true;
+                vid.muted = true;
+                vid.src = blobUrl;
+                canvas.replaceWith(vid);
+                note.textContent =
+                  'Road-trip style preview (~' + Math.round(DURATION / 1000) +
+                  's), generated in-browser from your daily Unsplash photos.';
+              } catch (e2) {
+                note.textContent = 'Preview finished. Video export failed; canvas animation was recorded.';
+              }
+            };
+            try {
+              rec.start(200);
+            } catch (e3) {
+              rec = null;
+            }
+          }
+
+          function frame(now) {
+            var elapsed = now - start;
+            if (elapsed >= DURATION) {
+              if (rec && rec.state !== 'inactive') {
+                try {
+                  rec.stop();
+                } catch (e4) {}
+              } else if (!rec) {
+                note.textContent =
+                  'Animation preview (~' + Math.round(DURATION / 1000) +
+                  's). Your browser did not export WebM; canvas playback above.';
+              }
+              return;
+            }
+            var idx = Math.min(valid.length - 1, Math.floor(elapsed / seg));
+            var segProgress = (elapsed - idx * seg) / seg;
+            var im = valid[idx];
+            var cw = canvas.width;
+            var ch = canvas.height;
+            var iw = im.naturalWidth;
+            var ih = im.naturalHeight;
+            var base = Math.max(cw / iw, ch / ih);
+            var s = base * (1 + 0.12 * segProgress);
+            var dw = iw * s;
+            var dh = ih * s;
+            var tx = (cw - dw) / 2 + Math.sin(segProgress * Math.PI) * 22;
+            var ty = (ch - dh) / 2 + (segProgress - 0.5) * 28;
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.drawImage(im, tx, ty, dw, dh);
+            requestAnimationFrame(frame);
+          }
+          requestAnimationFrame(frame);
+        });
+      }
+
       function openItinerary(route) {
         if (!route || !(route.itinerary && route.itinerary.length)) return;
         itineraryTitle.textContent = route.title || 'Itinerary';
         itinerarySubtitle.textContent = route.days ? (route.days + ' days') : '';
         itineraryBody.innerHTML = '';
+
+        var dayPhotoSlots = new Array(route.itinerary.length);
+        for (var _dsi = 0; _dsi < dayPhotoSlots.length; _dsi++) {
+          dayPhotoSlots[_dsi] = null;
+        }
 
         var stops = getStopsForRoute(route);
         var directionsUrl = buildGoogleDirectionsUrl(stops);
@@ -1746,7 +2051,7 @@
         }
         itineraryBody.appendChild(budgetPlanner);
 
-        route.itinerary.forEach(function(day) {
+        route.itinerary.forEach(function(day, dayIndex) {
           var wrap = document.createElement('div');
           wrap.className = 'day-item';
 
@@ -2078,17 +2383,13 @@
 
             var placeholderUrl = makePlaceholderDataUrl(city || q);
 
-            var cacheKey = 'roadtrip_dayphoto_v3_' + (route.id || 'route') + '_' + (day.date || '');
-            var cached = null;
-            try {
-              var raw = localStorage.getItem(cacheKey) || '';
-              cached = raw ? JSON.parse(raw) : null;
-            } catch (e) {}
+            var cached = readDayPhotoCache(route.id || 'route', day.date || '');
 
             var photoWrap = document.createElement('div');
             photoWrap.className = 'day-photo';
 
             if (cached && cached.url) {
+              dayPhotoSlots[dayIndex] = cached;
               var img = document.createElement('img');
               img.src = cached.url;
               img.alt = 'Scenery photo';
@@ -2162,9 +2463,8 @@
               .then(function(info) {
                 renderAttribution(photoWrap, info);
                 img2.src = info.url;
-                try {
-                  localStorage.setItem(cacheKey, JSON.stringify(info));
-                } catch (e) {}
+                dayPhotoSlots[dayIndex] = info;
+                writeDayPhotoCache(route.id || 'route', day.date || '', info);
               })
               .catch(function() {
                 revealPlaceholderOnly();
@@ -2185,6 +2485,39 @@
           if ((day.items || []).length) leftCol.appendChild(ul);
           itineraryBody.appendChild(wrap);
         });
+
+        var aiSection = document.createElement('section');
+        aiSection.className = 'ai-preview-section';
+        var aiH = document.createElement('h3');
+        aiH.textContent = 'AI road-trip preview';
+        var aiP = document.createElement('p');
+        aiP.textContent =
+          'Builds a short (≤15s) driving-style preview from the daily scenery photos above. ' +
+          'Wait until images finish loading, then click.';
+        var aiBtn = document.createElement('button');
+        aiBtn.type = 'button';
+        aiBtn.className = 'ai-preview-btn';
+        aiBtn.textContent = 'AI预览';
+        aiSection.appendChild(aiH);
+        aiSection.appendChild(aiP);
+        aiSection.appendChild(aiBtn);
+        aiBtn.addEventListener('click', function() {
+          var urls = [];
+          for (var pi = 0; pi < dayPhotoSlots.length; pi++) {
+            if (dayPhotoSlots[pi] && dayPhotoSlots[pi].url && String(dayPhotoSlots[pi].url).indexOf('http') === 0) {
+              urls.push(dayPhotoSlots[pi].url);
+            }
+          }
+          if (!urls.length) {
+            var domImgs = itineraryBody.querySelectorAll('.day-photo img');
+            for (var dj = 0; dj < domImgs.length; dj++) {
+              var src = domImgs[dj].src || '';
+              if (src.indexOf('http') === 0) urls.push(src);
+            }
+          }
+          openAiRoadTripPreview(urls);
+        });
+        itineraryBody.appendChild(aiSection);
 
         itineraryOverlay.classList.add('active');
         itineraryOverlay.setAttribute('aria-hidden', 'false');
