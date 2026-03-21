@@ -744,7 +744,8 @@
       flex: 0 0 228px;
       aspect-ratio: 16 / 9; /* Ensure img height:100% has a real height */
     }
-    .day-photo img {
+    .day-photo img,
+    .day-photo video {
       width: 100%;
       height: 100%;
       display: block;
@@ -826,7 +827,8 @@
       100% { transform: scale(1.08); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .day-photo img {
+      .day-photo img,
+      .day-photo video {
         animation: none;
       }
     }
@@ -1854,14 +1856,239 @@
         } catch (e2) {}
       }
 
-      function openAiRoadTripPreview(imageUrls) {
-        var urls = (imageUrls || []).filter(function(u) {
-          return u && String(u).indexOf('http') === 0;
+      function mergeDayPhotoCache(routeId, dateStr, partial) {
+        var base = readDayPhotoCache(routeId, dateStr) || {};
+        var merged = Object.assign({}, base, partial || {});
+        if (!merged.url && base.url) merged.url = base.url;
+        var key = dayPhotoStorageKey(routeId, dateStr);
+        var payload = JSON.stringify(merged);
+        try {
+          localStorage.setItem(key, payload);
+        } catch (e) {}
+        try {
+          sessionStorage.setItem('ss_' + key, payload);
+        } catch (e2) {}
+      }
+
+      var LUMA_API_BASE = 'https://api.lumalabs.ai/dream-machine/v1';
+      var LUMA_IMAGE_TO_VIDEO_PROMPT = '流体运镜, 车辆在公路上平稳行驶, 电影感, 4k';
+
+      function getLumaApiKey() {
+        try {
+          if (window.__LUMA_API_KEY__) return String(window.__LUMA_API_KEY__);
+        } catch (e) {}
+        try {
+          var k = localStorage.getItem('LUMA_API_KEY') || '';
+          if (k) return k;
+        } catch (e2) {}
+        return '';
+      }
+
+      function lumaFetchJson(path, options) {
+        var key = getLumaApiKey();
+        if (!key) return Promise.reject(new Error('Missing Luma API key (set window.__LUMA_API_KEY__ or localStorage.LUMA_API_KEY)'));
+        var opts = options || {};
+        opts.headers = Object.assign(
+          {
+            Accept: 'application/json',
+            Authorization: 'Bearer ' + key
+          },
+          opts.headers || {}
+        );
+        return fetch(LUMA_API_BASE + path, opts).then(function(resp) {
+          return resp.text().then(function(text) {
+            var body = {};
+            try {
+              body = text ? JSON.parse(text) : {};
+            } catch (e) {
+              body = { detail: text || 'Invalid JSON' };
+            }
+            if (!resp.ok) {
+              var msg =
+                (body && (body.detail || body.message || (body.errors && body.errors.join(', ')))) ||
+                ('Luma API error ' + resp.status);
+              throw new Error(msg);
+            }
+            return body;
+          });
         });
-        if (!urls.length) {
+      }
+
+      function createLumaGenerationFromUnsplashImage(imageUrl) {
+        return lumaFetchJson('/generations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: LUMA_IMAGE_TO_VIDEO_PROMPT,
+            model: 'ray-2',
+            resolution: '4k',
+            aspect_ratio: '16:9',
+            loop: true,
+            keyframes: {
+              frame0: {
+                type: 'image',
+                url: imageUrl
+              }
+            }
+          })
+        });
+      }
+
+      function getLumaGeneration(generationId) {
+        return lumaFetchJson('/generations/' + encodeURIComponent(generationId), { method: 'GET' });
+      }
+
+      function pollLumaGenerationUntilDone(generationId, intervalMs, onTick) {
+        var maxAttempts = 200;
+        var attempt = 0;
+        var interval = typeof intervalMs === 'number' ? intervalMs : 5000;
+
+        return new Promise(function(resolve, reject) {
+          function tick() {
+            attempt++;
+            getLumaGeneration(generationId)
+              .then(function(gen) {
+                if (typeof onTick === 'function') {
+                  try {
+                    onTick(gen);
+                  } catch (e) {}
+                }
+                var state = gen && gen.state;
+                if (state === 'completed') {
+                  resolve(gen);
+                  return;
+                }
+                if (state === 'failed') {
+                  reject(new Error(gen.failure_reason || 'Luma generation failed'));
+                  return;
+                }
+                if (attempt >= maxAttempts) {
+                  reject(new Error('Luma polling timeout'));
+                  return;
+                }
+                setTimeout(tick, interval);
+              })
+              .catch(reject);
+          }
+          setTimeout(tick, 0);
+        });
+      }
+
+      function replaceDayPhotoImgWithVideo(photoWrap, videoUrl) {
+        if (!photoWrap || !videoUrl) return;
+        var img = photoWrap.querySelector('img');
+        if (!img) return;
+        var vid = document.createElement('video');
+        vid.src = videoUrl;
+        vid.muted = true;
+        vid.playsInline = true;
+        vid.autoplay = true;
+        vid.loop = true;
+        vid.setAttribute('playsinline', '');
+        vid.style.display = 'block';
+        vid.style.width = '100%';
+        vid.style.height = '100%';
+        vid.style.objectFit = 'cover';
+        img.replaceWith(vid);
+      }
+
+      function startLumaAfterUnsplashReady(routeId, dateStr, dayIndex, imageUrl, info, photoWrap, dayPhotoSlots) {
+        if (!getLumaApiKey()) return;
+        if (!imageUrl || String(imageUrl).indexOf('http') !== 0) return;
+        if (info && info.lumaVideoUrl) return;
+        if (info && info.lumaPending) return;
+
+        if (info) info.lumaPending = true;
+        if (dayPhotoSlots && dayPhotoSlots[dayIndex]) {
+          dayPhotoSlots[dayIndex].lumaPending = true;
+        }
+
+        createLumaGenerationFromUnsplashImage(imageUrl)
+          .then(function(created) {
+            var gid = (created && created.id) || (created && created.generation_id);
+            if (!gid) throw new Error('Luma: no generation id');
+            return pollLumaGenerationUntilDone(gid, 5000, function(gen) {
+              /* optional: could show progress in UI */
+            });
+          })
+          .then(function(gen) {
+            var videoUrl = gen && gen.assets && gen.assets.video;
+            if (!videoUrl) throw new Error('Luma: no video URL');
+            if (info) {
+              delete info.lumaPending;
+              info.lumaVideoUrl = videoUrl;
+              info.lumaGenerationId = gen.id;
+            }
+            if (dayPhotoSlots && dayPhotoSlots[dayIndex]) {
+              delete dayPhotoSlots[dayIndex].lumaPending;
+              dayPhotoSlots[dayIndex].lumaVideoUrl = videoUrl;
+              dayPhotoSlots[dayIndex].lumaGenerationId = gen.id;
+            }
+            mergeDayPhotoCache(routeId, dateStr, {
+              lumaVideoUrl: videoUrl,
+              lumaGenerationId: gen.id
+            });
+            replaceDayPhotoImgWithVideo(photoWrap, videoUrl);
+          })
+          .catch(function(err) {
+            if (info) delete info.lumaPending;
+            if (dayPhotoSlots && dayPhotoSlots[dayIndex]) delete dayPhotoSlots[dayIndex].lumaPending;
+            if (window.console && console.warn) console.warn('Luma:', err);
+          });
+      }
+
+      function openAiRoadTripPreview(imageUrlsOrMedia) {
+        var media = [];
+        if (!imageUrlsOrMedia || !imageUrlsOrMedia.length) {
           alert('No scenery photos loaded yet. Scroll through the days and wait for images, then try again.');
           return;
         }
+        if (typeof imageUrlsOrMedia[0] === 'string') {
+          media = imageUrlsOrMedia
+            .filter(function(u) {
+              return u && String(u).indexOf('http') === 0;
+            })
+            .map(function(u) {
+              return { type: 'image', url: u };
+            });
+        } else {
+          media = imageUrlsOrMedia.filter(function(x) {
+            return x && x.url && String(x.url).indexOf('http') === 0;
+          });
+        }
+        if (!media.length) {
+          alert('No scenery photos loaded yet. Scroll through the days and wait for images, then try again.');
+          return;
+        }
+
+        var hasLuma = media.some(function(m) {
+          return m.type === 'video';
+        });
+        if (hasLuma) {
+          openAiVideoPlaylistPreview(
+            media
+              .filter(function(m) {
+                return m.type === 'video';
+              })
+              .map(function(m) {
+                return m.url;
+              })
+          );
+          return;
+        }
+
+        var urls = media
+          .filter(function(m) {
+            return m.type !== 'video';
+          })
+          .map(function(m) {
+            return m.url;
+          });
+        if (!urls.length) {
+          alert('No static images for canvas preview.');
+          return;
+        }
+
         var overlay = document.createElement('div');
         overlay.className = 'ai-preview-overlay';
         overlay.setAttribute('role', 'dialog');
@@ -2007,6 +2234,78 @@
           }
           requestAnimationFrame(frame);
         });
+      }
+
+      function openAiVideoPlaylistPreview(videoUrls) {
+        var urls = (videoUrls || []).filter(function(u) {
+          return u && String(u).indexOf('http') === 0;
+        });
+        if (!urls.length) {
+          alert('No Luma videos available yet. Wait for generation to finish, or set LUMA_API_KEY.');
+          return;
+        }
+        var overlay = document.createElement('div');
+        overlay.className = 'ai-preview-overlay';
+        overlay.setAttribute('role', 'dialog');
+        var box = document.createElement('div');
+        box.className = 'ai-preview-box';
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'ai-preview-close';
+        closeBtn.textContent = 'Close';
+        var note = document.createElement('div');
+        note.className = 'ai-preview-note';
+        note.textContent =
+          'Luma Dream Machine · ' +
+          urls.length +
+          ' clip(s). Playlist loops automatically (muted).';
+
+        var vid = document.createElement('video');
+        vid.controls = true;
+        vid.playsInline = true;
+        vid.muted = true;
+        vid.setAttribute('playsinline', '');
+        vid.style.width = '100%';
+        vid.style.height = 'auto';
+        vid.style.display = 'block';
+
+        var idx = 0;
+        function playAt(i) {
+          idx = ((i % urls.length) + urls.length) % urls.length;
+          vid.src = urls[idx];
+          vid.play().catch(function() {});
+        }
+
+        vid.addEventListener('ended', function() {
+          playAt(idx + 1);
+        });
+
+        box.appendChild(closeBtn);
+        box.appendChild(vid);
+        box.appendChild(note);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        document.body.style.overflow = 'hidden';
+
+        if (urls.length === 1) {
+          vid.loop = true;
+        }
+
+        function cleanup() {
+          try {
+            vid.pause();
+            vid.removeAttribute('src');
+            vid.load();
+          } catch (e) {}
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          document.body.style.overflow = 'hidden';
+        }
+        closeBtn.addEventListener('click', cleanup);
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) cleanup();
+        });
+
+        playAt(0);
       }
 
       function openItinerary(route) {
@@ -2172,6 +2471,9 @@
             var attraction = extractAttraction(day.items || []);
             var city = (day.city || '').trim();
             var q = (city + ' ' + attraction).trim();
+            if (!q) {
+              q = city || (route.tags && route.tags[0]) || 'travel landscape';
+            }
             if (!q) return;
 
             function escapeXml(str) {
@@ -2214,7 +2516,19 @@
               return DEFAULT_UNSPLASH_ACCESS_KEY;
             }
 
-            function getTravelHeroImage(keyword) {
+            function getCountryHintFromRoute(route) {
+              if (!route) return '';
+              var t = ((route.tags || []).join(' ') + ' ' + (route.title || '')).toLowerCase();
+              if (t.indexOf('norway') !== -1) return 'Norway';
+              if (t.indexOf('switzerland') !== -1) return 'Switzerland';
+              if (t.indexOf('new zealand') !== -1 || t.indexOf('zealand') !== -1) return 'New Zealand';
+              if (t.indexOf('australia') !== -1) return 'Australia';
+              if (t.indexOf('germany') !== -1) return 'Germany';
+              if (t.indexOf('europe') !== -1) return 'Europe';
+              return '';
+            }
+
+            function getTravelHeroImage(keyword, route, dayDateStr) {
               var accessKey = getUnsplashAccessKey();
               if (!accessKey) {
                 return Promise.reject(new Error('Missing Unsplash access key'));
@@ -2238,12 +2552,28 @@
                 );
               }
               function fetchOne(queryText) {
-                // If we get rate limited, stop retrying aggressively.
-                // (Unsplash will also include error info in JSON, but we keep this simple.)
                 var apiUrl =
                   'https://api.unsplash.com/photos/random' +
                   '?query=' + encodeURIComponent(queryText) +
                   '&orientation=landscape';
+                return fetch(apiUrl, {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': 'Client-ID ' + accessKey,
+                    'Accept-Version': 'v1'
+                  }
+                }).then(function(resp) {
+                  return resp.json().then(function(body) {
+                    if (!resp.ok) {
+                      var msg = (body && body.errors && body.errors.join(', ')) || ('Unsplash API failed: ' + resp.status);
+                      throw new Error(msg);
+                    }
+                    return body;
+                  });
+                });
+              }
+              function fetchRandomNoQuery() {
+                var apiUrl = 'https://api.unsplash.com/photos/random?orientation=landscape';
                 return fetch(apiUrl, {
                   method: 'GET',
                   headers: {
@@ -2276,20 +2606,22 @@
                 };
               }
 
+              var countryHint = getCountryHintFromRoute(route);
               var raw = normalizeQuery(keyword || '');
-              var cityOnly = normalizeQuery((raw.split(' ').slice(0, 3).join(' ')) || '');
-              // Keep the number of API requests low to avoid rate limits.
-              // Prefer general city/landscape queries first (more likely to exist).
-              var queries = [];
-              // Try a day-specific keyword first to reduce repeats; then fall back to general city.
-              // Also cap keyword length to avoid "No photos found" for too specific phrases.
-              var rawShort = raw.split(' ').slice(0, 7).join(' ');
-              if (rawShort) queries.push(rawShort);
-              if (cityOnly && cityOnly !== rawShort) queries.push(cityOnly + ' landscape');
-              queries.push('travel photography');
-              // Only try up to 2 queries below.
+              var cityOnly = normalizeQuery((raw.split(' ').slice(0, 4).join(' ')) || '');
+              var cityFirstWord = normalizeQuery((raw.split(' ')[0] || ''));
 
-              // Deduplicate while preserving order.
+              var rawShort = raw.split(' ').slice(0, 8).join(' ');
+              var queries = [];
+              if (rawShort) queries.push(rawShort);
+              if (cityFirstWord && countryHint && (cityFirstWord + ' ' + countryHint).toLowerCase() !== rawShort.toLowerCase()) {
+                queries.push(cityFirstWord + ' ' + countryHint);
+              }
+              if (cityOnly && cityOnly !== rawShort) queries.push(cityOnly + ' landscape');
+              if (countryHint) queries.push(countryHint + ' landscape nature');
+              queries.push('travel photography');
+              queries.push('mountain road landscape');
+
               var seen = {};
               queries = queries.filter(function(q) {
                 var k = normalizeQuery(q).toLowerCase();
@@ -2298,37 +2630,39 @@
                 seen[k] = true;
                 return true;
               });
+              queries = queries.slice(0, 6);
 
-              // Only try up to 2 queries.
-              queries = queries.slice(0, 2);
-
-              // Dedupe key must be based on the actual query used (avoid same city -> same photo).
+              var routeId = (route && route.id) ? route.id : 'route';
               var dedupeKey =
-                'unsplash_query_' +
-                normalizeQuery(queries[0] || rawShort || cityOnly || 'travel photography').toLowerCase();
+                'unsplash_day_' +
+                routeId +
+                '_' +
+                (dayDateStr || '') +
+                '_' +
+                normalizeQuery(queries[0] || raw || 'travel').toLowerCase();
               try {
                 if (!window.__UNSPLASH_CALLS__) window.__UNSPLASH_CALLS__ = {};
                 if (window.__UNSPLASH_CALLS__[dedupeKey]) return window.__UNSPLASH_CALLS__[dedupeKey];
               } catch (e) {}
 
-              // Global serialization to reduce burst rate-limit.
               try {
                 if (!window.__UNSPLASH_CHAIN__) window.__UNSPLASH_CHAIN__ = Promise.resolve();
               } catch (e) {}
 
-              function scheduleFetch(queryText) {
+              function scheduleFetch(queryText, extraDelayMs) {
+                var delay = typeof extraDelayMs === 'number' ? extraDelayMs : 0;
                 return new Promise(function(resolve, reject) {
                   try {
                     var start = window.__UNSPLASH_CHAIN__ || Promise.resolve();
                     var chainPromise = start
                       .then(function() {
-                        // Small delay between requests (helps with rate limits).
-                        return new Promise(function(r) { setTimeout(r, 250); });
+                        return new Promise(function(r) {
+                          setTimeout(r, 250 + delay);
+                        });
                       })
                       .then(function() {
                         return fetchOne(queryText).then(toInfo);
                       });
-                    // Keep chain alive even if this request fails.
                     window.__UNSPLASH_CHAIN__ = chainPromise.catch(function() { return null; });
                     chainPromise.then(resolve).catch(reject);
                   } catch (e) {
@@ -2337,19 +2671,45 @@
                 });
               }
 
+              function scheduleRandom(extraDelayMs) {
+                var delay = typeof extraDelayMs === 'number' ? extraDelayMs : 0;
+                return new Promise(function(resolve, reject) {
+                  try {
+                    var start = window.__UNSPLASH_CHAIN__ || Promise.resolve();
+                    var chainPromise = start
+                      .then(function() {
+                        return new Promise(function(r) {
+                          setTimeout(r, 400 + delay);
+                        });
+                      })
+                      .then(function() {
+                        return fetchRandomNoQuery().then(toInfo);
+                      });
+                    window.__UNSPLASH_CHAIN__ = chainPromise.catch(function() { return null; });
+                    chainPromise.then(resolve).catch(reject);
+                  } catch (e) {
+                    fetchRandomNoQuery().then(toInfo).then(resolve).catch(reject);
+                  }
+                });
+              }
+
               function tryQueriesAt(i) {
-                if (i >= queries.length) return Promise.reject(new Error('No suitable Unsplash photo found'));
-                var q = queries[i];
-                return scheduleFetch(q).catch(function(err) {
+                if (i >= queries.length) {
+                  return scheduleRandom(0);
+                }
+                var qtext = queries[i];
+                return scheduleFetch(qtext, 0).catch(function(err) {
                   var msg = (err && err.message) ? err.message : err;
+                  if (isRateLimitError(msg) && i + 1 < queries.length) {
+                    return tryQueriesAt(i + 1);
+                  }
                   if (isNoPhotosFoundError(msg) && i + 1 < queries.length) {
                     return tryQueriesAt(i + 1);
                   }
-                  if (isRateLimitError(msg)) {
-                    // Stop further attempts when rate limited.
-                    throw err;
+                  if (i + 1 < queries.length) {
+                    return tryQueriesAt(i + 1);
                   }
-                  throw err;
+                  return scheduleRandom(isRateLimitError(msg) ? 1200 : 0);
                 });
               }
 
@@ -2357,7 +2717,6 @@
               try {
                 if (!window.__UNSPLASH_CALLS__) window.__UNSPLASH_CALLS__ = {};
                 window.__UNSPLASH_CALLS__[dedupeKey] = p;
-                // Clear in-memory dedupe after completion so future cards can try again.
                 p.finally(function() {
                   try { delete window.__UNSPLASH_CALLS__[dedupeKey]; } catch (e) {}
                 });
@@ -2390,6 +2749,20 @@
 
             if (cached && cached.url) {
               dayPhotoSlots[dayIndex] = cached;
+              if (cached.lumaVideoUrl && String(cached.lumaVideoUrl).indexOf('http') === 0) {
+                var vidCached = document.createElement('video');
+                vidCached.src = cached.lumaVideoUrl;
+                vidCached.muted = true;
+                vidCached.playsInline = true;
+                vidCached.autoplay = true;
+                vidCached.loop = true;
+                vidCached.setAttribute('playsinline', '');
+                vidCached.style.display = 'block';
+                renderAttribution(photoWrap, cached);
+                photoWrap.appendChild(vidCached);
+                photoHolder.appendChild(photoWrap);
+                return;
+              }
               var img = document.createElement('img');
               img.src = cached.url;
               img.alt = 'Scenery photo';
@@ -2402,6 +2775,15 @@
               renderAttribution(photoWrap, cached);
               photoWrap.appendChild(img);
               photoHolder.appendChild(photoWrap);
+              startLumaAfterUnsplashReady(
+                route.id || 'route',
+                day.date || '',
+                dayIndex,
+                cached.url,
+                cached,
+                photoWrap,
+                dayPhotoSlots
+              );
               return;
             }
 
@@ -2440,7 +2822,7 @@
 
             var timeoutId = setTimeout(function() {
               revealPlaceholderOnly();
-            }, 3200);
+            }, 10000);
 
             img2.addEventListener('load', function() {
               clearTimeout(timeoutId);
@@ -2459,12 +2841,21 @@
             // Use city + the extracted "attraction" keyword to reduce repeats.
             var primaryTag = (route.tags && route.tags.length) ? route.tags[0] : '';
             var visualKeyword = [city, attraction, primaryTag].filter(Boolean).join(' ');
-            getTravelHeroImage(visualKeyword || q)
+            getTravelHeroImage(visualKeyword || q, route, day.date || '')
               .then(function(info) {
-                renderAttribution(photoWrap, info);
-                img2.src = info.url;
                 dayPhotoSlots[dayIndex] = info;
                 writeDayPhotoCache(route.id || 'route', day.date || '', info);
+                renderAttribution(photoWrap, info);
+                img2.src = info.url;
+                startLumaAfterUnsplashReady(
+                  route.id || 'route',
+                  day.date || '',
+                  dayIndex,
+                  info.url,
+                  info,
+                  photoWrap,
+                  dayPhotoSlots
+                );
               })
               .catch(function() {
                 revealPlaceholderOnly();
@@ -2492,8 +2883,8 @@
         aiH.textContent = 'AI road-trip preview';
         var aiP = document.createElement('p');
         aiP.textContent =
-          'Builds a short (≤15s) driving-style preview from the daily scenery photos above. ' +
-          'Wait until images finish loading, then click.';
+          'Luma Dream Machine: each day’s Unsplash photo can become a short clip (set LUMA_API_KEY). ' +
+          '【AI预览】plays Luma videos in a loop when ready; otherwise uses the in-browser photo montage.';
         var aiBtn = document.createElement('button');
         aiBtn.type = 'button';
         aiBtn.className = 'ai-preview-btn';
@@ -2502,20 +2893,29 @@
         aiSection.appendChild(aiP);
         aiSection.appendChild(aiBtn);
         aiBtn.addEventListener('click', function() {
-          var urls = [];
+          var media = [];
           for (var pi = 0; pi < dayPhotoSlots.length; pi++) {
-            if (dayPhotoSlots[pi] && dayPhotoSlots[pi].url && String(dayPhotoSlots[pi].url).indexOf('http') === 0) {
-              urls.push(dayPhotoSlots[pi].url);
+            var slot = dayPhotoSlots[pi];
+            if (!slot) continue;
+            if (slot.lumaVideoUrl && String(slot.lumaVideoUrl).indexOf('http') === 0) {
+              media.push({ type: 'video', url: slot.lumaVideoUrl });
+            } else if (slot.url && String(slot.url).indexOf('http') === 0) {
+              media.push({ type: 'image', url: slot.url });
             }
           }
-          if (!urls.length) {
+          if (!media.length) {
+            var domVids = itineraryBody.querySelectorAll('.day-photo video');
+            for (var dv = 0; dv < domVids.length; dv++) {
+              var vs = domVids[dv].currentSrc || domVids[dv].src || '';
+              if (vs.indexOf('http') === 0) media.push({ type: 'video', url: vs });
+            }
             var domImgs = itineraryBody.querySelectorAll('.day-photo img');
             for (var dj = 0; dj < domImgs.length; dj++) {
-              var src = domImgs[dj].src || '';
-              if (src.indexOf('http') === 0) urls.push(src);
+              var isrc = domImgs[dj].src || '';
+              if (isrc.indexOf('http') === 0) media.push({ type: 'image', url: isrc });
             }
           }
-          openAiRoadTripPreview(urls);
+          openAiRoadTripPreview(media);
         });
         itineraryBody.appendChild(aiSection);
 
