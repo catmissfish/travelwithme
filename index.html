@@ -3076,8 +3076,7 @@
 
         function applySnapshot(snapshot) {
           if (!snapshot) return;
-          if (snapshot.origin) originInput.value = snapshot.origin;
-          // Keep user's currently selected date; do not overwrite here.
+          // Keep user-entered origin/date; do not overwrite required fields.
           if (snapshot.outbound) outboundInput.value = String(snapshot.outbound);
           if (snapshot.inbound) returnInput.value = String(snapshot.inbound);
           var map = {};
@@ -3107,6 +3106,25 @@
 
         var loadingSnapshotByMonth = {};
         var prevToggleText = toggleBtn.textContent;
+
+        function hasRequiredInputs() {
+          return !!((originInput.value || '').trim() && (departDateInput.value || '').trim());
+        }
+
+        function updateBudgetVisibility() {
+          var ready = hasRequiredInputs();
+          outboundField.style.display = ready ? 'grid' : 'none';
+          returnField.style.display = ready ? 'grid' : 'none';
+          hotelList.style.display = ready ? 'grid' : 'none';
+          summary.style.display = ready ? 'block' : 'none';
+          snapshotBox.style.display = ready ? 'block' : 'none';
+          if (!ready) {
+            setSnapshotNote('');
+            flightTotalEl.textContent = '0';
+            hotelTotalEl.textContent = '0';
+            grandTotalEl.textContent = '0';
+          }
+        }
 
         function setEstimateLoading(loading) {
           if (loading) {
@@ -3245,6 +3263,12 @@
         }
 
         function recalcBudget() {
+          if (!hasRequiredInputs()) {
+            flightTotalEl.textContent = '0';
+            hotelTotalEl.textContent = '0';
+            grandTotalEl.textContent = '0';
+            return;
+          }
           var flightTotal = parseNum(outboundInput.value) + parseNum(returnInput.value);
           var hotelTotal = hotelInputs.reduce(function(sum, h) {
             return sum + parseNum(h.input.value) * h.nights;
@@ -3257,9 +3281,21 @@
 
         originInput.addEventListener('input', function() {
           rebuildLinks();
+          updateBudgetVisibility();
+          if (!hasRequiredInputs()) return;
+          var mk = selectedMonthKey();
+          if (!getSavedSnapshot(mk)) {
+            autoFetchMonthlyBaseline(mk);
+          } else {
+            var snap = getSavedSnapshot(mk);
+            if (snap) applySnapshot(snap);
+            refreshSnapshotNote();
+          }
         });
         departDateInput.addEventListener('input', function() {
           rebuildLinks();
+          updateBudgetVisibility();
+          if (!hasRequiredInputs()) return;
           var mk = selectedMonthKey();
           if (!getSavedSnapshot(mk)) {
             autoFetchMonthlyBaseline(mk);
@@ -3276,12 +3312,12 @@
           h.input.addEventListener('input', recalcBudget);
         });
 
+        // Always start empty on open/refresh for required fields.
+        originInput.value = '';
+        departDateInput.value = '';
         rebuildLinks();
+        updateBudgetVisibility();
         recalcBudget();
-        var initialMk = selectedMonthKey();
-        var initialSnapshot = getSavedSnapshot(initialMk);
-        if (initialSnapshot) applySnapshot(initialSnapshot);
-        refreshSnapshotNote();
 
         toggleBtn.addEventListener('click', function() {
           var expanded = card.classList.toggle('expanded');
