@@ -753,6 +753,9 @@
       transform-origin: center center;
       animation: day-photo-breathe 18s ease-in-out infinite alternate;
     }
+    .day-photo img {
+      cursor: zoom-in;
+    }
     .day-photo-skeleton {
       width: 100%;
       aspect-ratio: 16 / 9;
@@ -943,6 +946,44 @@
       background: rgba(15,23,42,0.95);
       border-top: 1px solid rgba(51,65,85,0.6);
     }
+    .media-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2,6,23,0.82);
+      backdrop-filter: blur(6px);
+      padding: 20px;
+    }
+    .media-lightbox.active {
+      display: flex;
+    }
+    .media-lightbox img {
+      max-width: min(92vw, 1500px);
+      max-height: 88vh;
+      width: auto;
+      height: auto;
+      display: block;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.38);
+      cursor: zoom-out;
+    }
+    .media-lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      background: rgba(255,255,255,0.95);
+      color: #0f172a;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.24);
+    }
   </style>
 </head>
 <body>
@@ -1000,6 +1041,11 @@
       </div>
       <div class="itinerary" id="itineraryBody"></div>
     </div>
+  </div>
+
+  <div class="media-lightbox" id="mediaLightbox" aria-hidden="true">
+    <button class="media-lightbox-close" type="button" id="mediaLightboxClose">Close</button>
+    <img id="mediaLightboxImg" alt="Enlarged day photo">
   </div>
 
   <script>
@@ -1566,7 +1612,28 @@
       var itinerarySubtitle = document.getElementById('itinerarySubtitle');
       var itineraryBody = document.getElementById('itineraryBody');
       var heroVideo = document.getElementById('heroVideo');
+      var mediaLightbox = document.getElementById('mediaLightbox');
+      var mediaLightboxClose = document.getElementById('mediaLightboxClose');
+      var mediaLightboxImg = document.getElementById('mediaLightboxImg');
       var googleMapsApiKey = '';
+
+      function openPhotoLightbox(src) {
+        if (!mediaLightbox || !mediaLightboxImg || !src) return;
+        mediaLightboxImg.src = src;
+        mediaLightbox.classList.add('active');
+        mediaLightbox.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closePhotoLightbox() {
+        if (!mediaLightbox || !mediaLightboxImg) return;
+        mediaLightbox.classList.remove('active');
+        mediaLightbox.setAttribute('aria-hidden', 'true');
+        mediaLightboxImg.src = '';
+        if (!itineraryOverlay.classList.contains('active')) {
+          document.body.style.overflow = '';
+        }
+      }
 
       function formatDate(d) {
         if (!d) return '-';
@@ -2756,6 +2823,9 @@
               img.alt = 'Scenery photo';
               img.loading = 'lazy';
               img.style.display = 'block';
+              img.addEventListener('click', function() {
+                openPhotoLightbox(cached.url);
+              });
               img.addEventListener('error', function() {
                 img.src = placeholderUrl;
                 renderAttribution(photoWrap, null);
@@ -2785,6 +2855,10 @@
             img2.style.display = 'block';
             img2.style.opacity = '0';
             img2.style.transition = 'opacity 220ms ease';
+            img2.addEventListener('click', function() {
+              var src = img2.currentSrc || img2.src;
+              if (src && src.indexOf('http') === 0) openPhotoLightbox(src);
+            });
 
             // Overlay placeholder while waiting for API/image load.
             var placeholderOverlay = document.createElement('div');
@@ -3350,7 +3424,23 @@
       itineraryOverlay.addEventListener('click', function(e) {
         if (e.target === itineraryOverlay) closeItinerary();
       });
+      if (mediaLightboxClose) {
+        mediaLightboxClose.addEventListener('click', function() {
+          closePhotoLightbox();
+        });
+      }
+      if (mediaLightbox) {
+        mediaLightbox.addEventListener('click', function(e) {
+          if (e.target === mediaLightbox || e.target === mediaLightboxImg) {
+            closePhotoLightbox();
+          }
+        });
+      }
       window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mediaLightbox && mediaLightbox.classList.contains('active')) {
+          closePhotoLightbox();
+          return;
+        }
         if (e.key === 'Escape' && itineraryOverlay.classList.contains('active')) closeItinerary();
       });
 
